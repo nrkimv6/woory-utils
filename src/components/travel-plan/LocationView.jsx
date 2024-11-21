@@ -54,9 +54,14 @@ console.log('activeTab '+activeTab);
         />
       ) : (
         <>
+
           <TimelineView
             visits={getTimelineItems()}
             date={date}
+            selectedItem={selectedItem}
+            onItemClick={onItemClick}
+            onItemEdit={onItemEdit}
+            onItemDelete={onItemDelete}
           />
           <LocationList
             items={getFilteredItems()}

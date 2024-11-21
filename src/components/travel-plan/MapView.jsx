@@ -70,7 +70,18 @@ export const MapView = ({ items, selectedLocation, type, onLocationSelect, onMar
       }
     });
 
-    if (!isFormType && overlaysRef.current.length > 0) {
+    if ( selectedLocation ){
+      const lat = selectedLocation.lat || selectedLocation.tp_events?.lat;
+      const lng = selectedLocation.lng || selectedLocation.tp_events?.lng;
+      console.log("selectedLocation1 " + selectedLocation);
+
+      if (lat && lng) {
+        const position = new window.kakao.maps.LatLng(lat, lng);
+        console.log("position1 " + position);
+        kakaoMap.panTo(position);
+      }
+    }
+    else if (!isFormType && overlaysRef.current.length > 0) {
       const padding = 0;
       const virtualBounds = new window.kakao.maps.LatLngBounds(
         new window.kakao.maps.LatLng(minLat - padding, minLng - padding),
@@ -78,23 +89,29 @@ export const MapView = ({ items, selectedLocation, type, onLocationSelect, onMar
       );
 
       kakaoMap.setBounds(virtualBounds);
-    } else if (isFormType && overlaysRef.current.length > 0) {
+    } 
+    else if (isFormType && overlaysRef.current.length > 0 && !(lat && lng)) {
       kakaoMap.panTo(overlaysRef.current[0].getPosition());
     }
   }, [type, isFormType, items, onMarkerClick]);
 
-  useEffect(() => {
-    const kakaoMap = mapRef.current;
-    if (!kakaoMap || !selectedLocation) return;
+  // useEffect(() => {
+  //   const kakaoMap = mapRef.current;
+  //   if (!kakaoMap || !selectedLocation) {
+  //     console.log("selectedLocation 실패.");
+  //     return;
+  //   }
 
-    const lat = selectedLocation.lat || selectedLocation.tp_events?.lat;
-    const lng = selectedLocation.lng || selectedLocation.tp_events?.lng;
+  //   const lat = selectedLocation.lat || selectedLocation.tp_events?.lat;
+  //   const lng = selectedLocation.lng || selectedLocation.tp_events?.lng;
+  //   console.log("selectedLocation " + selectedLocation);
 
-    if (lat && lng) {
-      const position = new window.kakao.maps.LatLng(lat, lng);
-      kakaoMap.panTo(position);
-    }
-  }, [selectedLocation]);
+  //   if (lat && lng) {
+  //     const position = new window.kakao.maps.LatLng(lat, lng);
+  //     console.log("position " + position);
+  //     kakaoMap.panTo(position);
+  //   }
+  // }, [selectedLocation]);
 
   const handleMapClick = useCallback((mouseEvent) => {
     if (!isFormType) return;
