@@ -1,10 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect,useState } from 'react';
 import { Card, Select, Stack, Group, Tabs, Text, Badge, Button } from '@mantine/core';
 import { EventDetailView} from './EventDetailView';
 import { VisitDetailView} from './VisitDetailView';
 
 export const MapView = ({ items, selectedLocation, type, onLocationSelect }) => {
   const [map, setMap] = useState(null);
+  const [marker, setMarker] = useState(null);  // form type용 단일 마커
   const [customOverlays, setCustomOverlays] = useState([]);
   const mapId = `map-${type}`;
 
@@ -15,37 +16,56 @@ export const MapView = ({ items, selectedLocation, type, onLocationSelect }) => 
 
     const options = {
       center: new kakao.maps.LatLng(37.5665, 126.9780),
-      level: 7
+      level: 3  // form type일 때는 더 확대된 뷰
     };
 
     const kakaoMap = new kakao.maps.Map(container, options);
     setMap(kakaoMap);
 
-    // 위치 선택 모드인 경우 클릭 이벤트 추가
-    if (onLocationSelect) {
+    // form type인 경우 클릭 이벤트 추가
+    if (type === 'form') {
       const clickListener = kakao.maps.event.addListener(
         kakaoMap,
         'click',
         (mouseEvent) => {
-          onLocationSelect(mouseEvent.latLng);
+          const latlng = mouseEvent.latLng;
+          
+          // 기존 마커 제거
+          if (marker) {
+            marker.setMap(null);
+          }
+
+          // 새 마커 생성 
+          // 기본 마커 이미지 외에도 RED, BLUE, YELLOW, GREEN 등의 마커 이미지 사용 가능
+          const newMarker = new kakao.maps.Marker({
+            position: latlng,
+            image: kakao.maps.MarkerImage.RED // 또는 다른 기본 제공 이미지
+          });
+          
+          newMarker.setMap(kakaoMap);
+          setMarker(newMarker);
+          
+          if (onLocationSelect) {
+            onLocationSelect(latlng);
+          }
         }
       );
 
       return () => {
         kakao.maps.event.removeListener(clickListener);
+        if (marker) {
+          marker.setMap(null);
+        }
       };
     }
-  }, [mapId, onLocationSelect]);
+  }, [mapId, type]);
 
-  // 마커 업데이트
+  // 목록 표시용 마커 업데이트 (form type이 아닐 때만)
   useEffect(() => {
-    if (!map || !items?.length) return;
+    if (!map || type === 'form' || !items?.length) return;
 
-    // 기존 오버레이 제거
     customOverlays.forEach(overlay => overlay.setMap(null));
     const newOverlays = [];
-
-    // bounds 객체 생성
     const bounds = new kakao.maps.LatLngBounds();
 
     items.forEach((location, index) => {
@@ -56,7 +76,7 @@ export const MapView = ({ items, selectedLocation, type, onLocationSelect }) => 
         const position = new kakao.maps.LatLng(lat, lng);
         bounds.extend(position);
 
-        // ... 기존 마커 생성 코드 ...
+
         const customOverlay = new kakao.maps.CustomOverlay({
           position: position,
           content: markerContent,
@@ -69,21 +89,21 @@ export const MapView = ({ items, selectedLocation, type, onLocationSelect }) => 
     });
 
     setCustomOverlays(newOverlays);
-
-    // 모든 마커가 보이도록 지도 영역 조정
-    if (!onLocationSelect) {  // 위치 선택 모드가 아닐 때만 자동 조정
-      map.setBounds(bounds);
-    }
+    map.setBounds(bounds);
   }, [map, items, type]);
 
   return (
-    <div style={{ width: '66.666%', position: 'relative', height: '600px' }}>
+    <div style={{ 
+      width: type === 'form' ? '100%' : '66.666%', 
+      position: 'relative', 
+      height: type === 'form' ? '400px' : '600px' 
+    }}>
       <div id={mapId} style={{ 
         width: '100%', 
         height: '100%', 
         position: 'absolute' 
       }} />
-      {selectedLocation && (
+      {type !== 'form' && selectedLocation && (
         <Card style={{
           position: 'absolute',
           bottom: 0,
