@@ -13,12 +13,14 @@ import { LocationList } from '@/components/travel-plan/LocationList';
 import { MapView } from '@/components/travel-plan/MapView';
 import { useLocationFilter } from '@/hooks/travel-plan/useLocationFilter';
 
+// KakaoMapList.jsx
 const KakaoMapList = () => {
+  const [activeTab, setActiveTab] = useState("events");
+
   const isKakaoLoaded = useKakaoLoader();
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [events, setEvents] = useState([]);
   const [visits, setVisits] = useState([]);
-  const [activeTab, setActiveTab] = useState("events");
   const [editingEvent, setEditingEvent] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [selectedVisit, setSelectedVisit] = useState(null);
@@ -128,13 +130,11 @@ const KakaoMapList = () => {
           />
         )}
       </Group>
-      
       <Tabs value={activeTab} onChange={handleTabChange}>
         <Tabs.List>
           <Tabs.Tab value="events">이벤트 목록</Tabs.Tab>
           <Tabs.Tab value="visits">방문 계획</Tabs.Tab>
         </Tabs.List>
-
         {["events", "visits"].map(tabValue => (
           <Tabs.Panel key={tabValue} value={tabValue}>
             <Filters
@@ -157,6 +157,7 @@ const KakaoMapList = () => {
                 selectedLocation={selectedLocation}
                 type={tabValue}
                 onMarkerClick={tabValue === "events" ? handleEventClick : handleVisitClick}
+                visible={activeTab === tabValue}
               />
             </div>
           </Tabs.Panel>
@@ -165,5 +166,6 @@ const KakaoMapList = () => {
     </div>
   );
 };
+
 
 export default KakaoMapList;
