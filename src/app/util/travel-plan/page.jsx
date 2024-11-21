@@ -310,7 +310,13 @@ const KakaoMapList = () => {
               </Stack>
             </div>
             <div style={{ width: '66.666%', position: 'relative' }}>
-              <div id="map" style={{ width: '100%', height: '66.666%' }} />
+<div id="map" style={{ 
+  width: '100%', 
+  height: '100%',  // 66.666%에서 100%로 변경
+  position: 'absolute',
+  top: 0,
+  left: 0
+}} />
 
               {selectedLocation && (
                 <Card
