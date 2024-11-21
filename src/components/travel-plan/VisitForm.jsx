@@ -1,11 +1,11 @@
 "use client"
 
-import { useState } from 'react';
-import { 
-  TextInput, 
-  Checkbox, 
-  Textarea, 
-  Button, 
+import { useState, useEffect  } from 'react';
+import {
+  TextInput,
+  Checkbox,
+  Textarea,
+  Button,
   Modal,
   Stack,
   Grid,
@@ -13,9 +13,9 @@ import {
   NumberInput
 } from '@mantine/core';
 import { DateTimePicker } from '@mantine/dates';
-import {formatDateForDB} from '@/util/formatter'
+import { formatDateForDB } from '@/util/formatter'
 
-export default function VisitForm({ eventId, onSubmit, initialData }) {
+export default function VisitForm({ eventId, onSubmit, initialData, onClose }) {
   const [opened, setOpened] = useState(false);
   const [formData, setFormData] = useState(initialData || {
     event_id: eventId,
@@ -28,22 +28,47 @@ export default function VisitForm({ eventId, onSubmit, initialData }) {
     reference_url: '',
     notes: ''
   });
-
+  useEffect(() => {
+    if (initialData) {
+      setOpened(true);
+      setFormData({
+        ...initialData,
+        reservation_time: initialData.reservation_time ? new Date(initialData.reservation_time) : null,
+        visit_time: initialData.visit_time ? new Date(initialData.visit_time) : null
+      });
+    }
+  }, [initialData]);
   const handleSubmit = async (e) => {
     e.preventDefault();
     await onSubmit(formData);
     setOpened(false);
   };
-
+  const handleClose = () => {
+    setOpened(false);
+    setFormData({
+      event_id: eventId,
+      is_reserved: false,
+      reservation_time: null,
+      is_important: false,
+      visit_time: null,
+      visit_order: 1,
+      reservation_url: '',
+      reference_url: '',
+      notes: ''
+    });
+    onClose?.();
+  };
   return (
     <>
       <Button variant="outline" onClick={() => setOpened(true)}>
-        방문 계획 {initialData ? '수정' : '추가'}
+        방문 계획 추가
       </Button>
 
       <Modal
-        opened={opened}
-        onClose={() => setOpened(false)}
+        opened={initialData ? true : opened}
+        onClose={() => {
+          handleClose();
+        }}
         title={`방문 계획 ${initialData ? '수정' : '추가'}`}
         size="lg"
       >
@@ -54,9 +79,9 @@ export default function VisitForm({ eventId, onSubmit, initialData }) {
                 <Checkbox
                   label="예약 완료"
                   checked={formData.is_reserved}
-                  onChange={(event) => setFormData(prev => ({ 
-                    ...prev, 
-                    is_reserved: event.currentTarget.checked 
+                  onChange={(event) => setFormData(prev => ({
+                    ...prev,
+                    is_reserved: event.currentTarget.checked
                   }))}
                 />
               </Grid.Col>
@@ -78,9 +103,9 @@ export default function VisitForm({ eventId, onSubmit, initialData }) {
                 <Checkbox
                   label="중요"
                   checked={formData.is_important}
-                  onChange={(event) => setFormData(prev => ({ 
-                    ...prev, 
-                    is_important: event.currentTarget.checked 
+                  onChange={(event) => setFormData(prev => ({
+                    ...prev,
+                    is_important: event.currentTarget.checked
                   }))}
                 />
               </Grid.Col>

@@ -12,6 +12,7 @@ import { Filters } from '@/components/travel-plan/Filters';
 import { LocationList } from '@/components/travel-plan/LocationList';
 import { MapView } from '@/components/travel-plan/MapView';
 import { useLocationFilter } from '@/hooks/travel-plan/useLocationFilter';
+import { notifications } from '@mantine/notifications';
 
 // KakaoMapList.jsx
 const KakaoMapList = () => {
@@ -22,6 +23,7 @@ const KakaoMapList = () => {
   const [events, setEvents] = useState([]);
   const [visits, setVisits] = useState([]);
   const [editingEvent, setEditingEvent] = useState(null);
+  const [editingVisit, setEditingVisit] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [selectedVisit, setSelectedVisit] = useState(null);
   const { filters, setFilters, filteredItems } = useLocationFilter(activeTab, events, visits);
@@ -84,25 +86,54 @@ const KakaoMapList = () => {
       console.error('Error fetching visits:', error);
     }
   };
-
   const handleEventSubmit = async (eventData) => {
     try {
-      await eventApi.addEvent(eventData);
+      if (editingEvent) {
+        // 수정일 경우
+        await eventApi.updateEvent(editingEvent.id, eventData);
+        notifications.show({
+          title: "성공",
+          message: "이벤트가 수정되었습니다.",
+          color: "green"
+        });
+      } else {
+        // 추가일 경우
+        await eventApi.addEvent(eventData);
+        notifications.show({
+          title: "성공",
+          message: "이벤트가 추가되었습니다.",
+          color: "green"
+        });
+      }
       fetchEvents();
+      setEditingEvent(null);
     } catch (error) {
-      console.error('Error adding event:', error);
+      console.error('Error managing event:', error);
+      notifications.show({
+        title: "오류",
+        message: `이벤트 ${editingEvent ? '수정' : '추가'}에 실패했습니다.`,
+        color: "red"
+      });
     }
   };
 
-  const handleVisitSubmit = async (visitData) => {
-    try {
+const handleVisitSubmit = async (visitData) => {
+  try {
+    if (editingVisit) {
+      await visitApi.updateVisit(editingVisit.id, visitData);
+    } else {
       await visitApi.addVisit(visitData);
-      fetchVisits(visitData.event_id);
-    } catch (error) {
-      console.error('Error adding visit:', error);
     }
-  };
+    fetchVisits();
+    setEditingVisit(null);
+  } catch (error) {
+    console.error('Error managing visit:', error);
+  }
+};
 
+const handleVisitFormClose = () => {
+  setEditingVisit(null);
+};
   useEffect(() => {
     fetchEvents();
     fetchVisits();
@@ -116,17 +147,25 @@ const KakaoMapList = () => {
     }
   }, [activeTab]);
 
+  const handleFormClose = () => {
+    setEditingEvent(null);  // 폼이 닫힐 때 초기화
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
       <Group position="right" p="md">
         <EventForm
           onSubmit={handleEventSubmit}
           initialData={editingEvent}
+          onClose={handleFormClose}
+
         />
         {selectedLocation && (
           <VisitForm
             eventId={selectedEvent?.id || selectedVisit?.tp_events?.id}
             onSubmit={handleVisitSubmit}
+            initialData={editingVisit}
+            onClose={handleVisitFormClose}
           />
         )}
       </Group>
@@ -148,7 +187,7 @@ const KakaoMapList = () => {
                 activeTab={tabValue}
                 selectedItem={tabValue === "events" ? selectedEvent : selectedVisit}
                 onItemClick={tabValue === "events" ? handleEventClick : handleVisitClick}
-                onItemEdit={setEditingEvent}
+                onItemEdit={tabValue === "events" ? setEditingEvent : setEditingVisit}
                 onItemDelete={(id) => handleDelete(id, tabValue)}
                 type={tabValue}
               />

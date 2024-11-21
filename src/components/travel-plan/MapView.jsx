@@ -16,7 +16,6 @@ export const MapView = ({ items, selectedLocation, type, onLocationSelect, onMar
   const overlaysRef = useRef([]);
   const initializedRef = useRef(false);
 
-  // 마커/오버레이 업데이트 - 메모이제이션된 함수
   const updateMarkersAndOverlays = useCallback(() => {
     const kakaoMap = mapRef.current;
     if (!kakaoMap || !items?.length) return;
@@ -24,30 +23,36 @@ export const MapView = ({ items, selectedLocation, type, onLocationSelect, onMar
     // 기존 오버레이 제거
     overlaysRef.current.forEach(overlay => overlay.setMap(null));
     overlaysRef.current = [];
-    
-    if (marker) marker.setMap(null);
 
     const bounds = new window.kakao.maps.LatLngBounds();
 
+    let minLat = 90, maxLat = -90, minLng = 180, maxLng = -180;
     items.forEach((item, index) => {
-      const lat = type === "events" ? item.lat : item.tp_events?.lat;
-      const lng = type === "events" ? item.lng : item.tp_events?.lng;
+
+      const lat = Number(item.lat || item.tp_events?.lat);
+      const lng = Number(item.lng || item.tp_events?.lng);
 
       if (lat && lng) {
+        minLat = Math.min(minLat, lat);
+        maxLat = Math.max(maxLat, lat);
+        minLng = Math.min(minLng, lng);
+        maxLng = Math.max(maxLng, lng);
         const position = new window.kakao.maps.LatLng(lat, lng);
         bounds.extend(position);
 
         if (isFormType) {
-          const newMarker = new window.kakao.maps.Marker({
+          // Form 타입일 때는 일반 마커 사용
+          const marker = new window.kakao.maps.Marker({
             position: position,
             map: kakaoMap
           });
-          setMarker(newMarker);
-          kakaoMap.panTo(position);
+          overlaysRef.current.push(marker);  // marker도 overlay ref에서 관리
         } else {
+          // 일반 리스트용 커스텀 오버레이
           const markerDiv = document.createElement('div');
           markerDiv.style.background = PASTEL_COLORS[index % PASTEL_COLORS.length];
           markerDiv.style.padding = '5px 10px';
+
           markerDiv.style.borderRadius = type === "events" ? '4px' : '50%';
           markerDiv.style.color = '#333';
           markerDiv.style.fontWeight = 'bold';
@@ -68,7 +73,7 @@ export const MapView = ({ items, selectedLocation, type, onLocationSelect, onMar
           arrow.style.borderLeft = '8px solid transparent';
           arrow.style.borderRight = '8px solid transparent';
           arrow.style.borderTop = `8px solid ${PASTEL_COLORS[index % PASTEL_COLORS.length]}`;
-          
+
           markerDiv.appendChild(arrow);
           markerDiv.addEventListener('click', () => onMarkerClick?.(item));
 
@@ -85,55 +90,78 @@ export const MapView = ({ items, selectedLocation, type, onLocationSelect, onMar
     });
 
     if (!isFormType && overlaysRef.current.length > 0) {
-      kakaoMap.setBounds(bounds);
+      // const padding = getPaddingByLevel(kakaoMap.getLevel());
+      const padding = 0;
+      console.log('level + ' + kakaoMap.getLevel() + ', padding ' + padding)
+
+      const virtualBounds = new window.kakao.maps.LatLngBounds(
+        new window.kakao.maps.LatLng(minLat - padding, minLng - padding),
+        new window.kakao.maps.LatLng(maxLat + padding, maxLng + padding)
+      );
+
+      kakaoMap.setBounds(virtualBounds);
+    } else if (isFormType && overlaysRef.current.length > 0) {
+      kakaoMap.panTo(overlaysRef.current[0].getPosition());
     }
-  }, [type, isFormType, items, onMarkerClick, marker]);
+  }, [type, isFormType, items, onMarkerClick]);
+
+  useEffect(() => {
+    const kakaoMap = mapRef.current;
+    if (!kakaoMap || !selectedLocation) return;
+
+    const lat = selectedLocation.lat || selectedLocation.tp_events?.lat;
+    const lng = selectedLocation.lng || selectedLocation.tp_events?.lng;
+
+    if (lat && lng) {
+      const position = new window.kakao.maps.LatLng(lat, lng);
+      kakaoMap.panTo(position);
+    }
+  }, [selectedLocation]);
+
+  const handleMapClick = useCallback((mouseEvent) => {
+    if (!isFormType) return;
+
+    const latlng = mouseEvent.latLng;
+    onLocationSelect?.(latlng);
+    const kakaoMap = mapRef.current;
+    kakaoMap?.panTo(latlng);
+  }, [isFormType, onLocationSelect]);
 
   // 지도 초기화 - 한 번만 실행되도록 수정
   const initializeMap = useCallback(() => {
     if (!isKakaoLoaded || !mapContainerRef.current || initializedRef.current) return;
-
     console.log(`${type} MapView - 초기화 시작`, new Date().toISOString());
 
     const options = {
       center: new window.kakao.maps.LatLng(37.5665, 126.9780),
       level: isFormType ? 3 : 7
     };
-    if(mapRef.current){
-      mapRef.current=null;
+    if (mapRef.current) {
+      mapRef.current = null;
     }
 
-  setTimeout(() => {
-    const kakaoMap = new window.kakao.maps.Map(mapContainerRef.current, options);
-    mapRef.current = kakaoMap;
+    setTimeout(() => {
+      const kakaoMap = new window.kakao.maps.Map(mapContainerRef.current, options);
+      mapRef.current = kakaoMap;
 
-    if (isFormType && onLocationSelect) {
-      const listener = window.kakao.maps.event.addListener(
-        kakaoMap,
-        'click',
-        (mouseEvent) => {
-          const latlng = mouseEvent.latLng;
-          if (marker) marker.setMap(null);
-          const newMarker = new window.kakao.maps.Marker({
-            position: latlng,
-            map: kakaoMap
-          });
-          setMarker(newMarker);
-          onLocationSelect(latlng);
-          kakaoMap.panTo(latlng);
-        }
-      );
-      setClickListener(listener);
-    }
+      if (isFormType && onLocationSelect) {
 
-    initializedRef.current = true;
-    kakaoMap.relayout();
-    updateMarkersAndOverlays();
+        const listener = window.kakao.maps.event.addListener(
+          kakaoMap,
+          'click',
+          handleMapClick
+        );
+        setClickListener(listener);
+      }
 
-    console.log(`${type} MapView - 초기화 끝`, new Date().toISOString());
-  }, 100); // 100ms 딜레이
+      initializedRef.current = true;
+      kakaoMap.relayout();
+      updateMarkersAndOverlays();
 
-}, [isKakaoLoaded, isFormType, onLocationSelect, marker, updateMarkersAndOverlays]);
+      console.log(`${type} MapView - 초기화 끝`, new Date().toISOString());
+    }, 100); // 100ms 딜레이
+
+  }, [isKakaoLoaded, isFormType, onLocationSelect, marker, updateMarkersAndOverlays]);
 
 
   // visible이 true가 될 때만 초기화
@@ -141,7 +169,7 @@ export const MapView = ({ items, selectedLocation, type, onLocationSelect, onMar
     if (visible && !initializedRef.current) {
       initializeMap();
     }
-    
+
     return () => {
       if (!visible) {
         // cleanup when hidden
@@ -175,16 +203,16 @@ export const MapView = ({ items, selectedLocation, type, onLocationSelect, onMar
   }, [visible]);
 
   return (
-    <div style={{ 
-      width: isFormType ? '100%' : '66.666%', 
-      position: 'relative', 
+    <div style={{
+      width: isFormType ? '100%' : '66.666%',
+      position: 'relative',
       height: isFormType ? '400px' : '600px',
       display: visible ? 'block' : 'none'
     }}>
-      <div 
+      <div
         ref={mapContainerRef}
-        id={mapId} 
-        style={{ width: '100%', height: '100%', position: 'absolute' }} 
+        id={mapId}
+        style={{ width: '100%', height: '100%', position: 'absolute' }}
       />
       {!isFormType && selectedLocation && visible && (
         <Card style={{

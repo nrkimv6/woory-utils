@@ -23,7 +23,7 @@ import { formatDateForDB } from '@/util/formatter';
 import { MapView } from './MapView';
 import { useKakaoLoader } from '@/hooks/useKakaoLoader';
 
-export default function EventForm({ onSubmit, initialData }) {
+export default function EventForm({ onSubmit, initialData, onClose }) {
   const [opened, setOpened] = useState(false);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [mapKey, setMapKey] = useState(0); // 맵 컴포넌트 강제 리렌더링을 위한 키
@@ -137,6 +137,17 @@ export default function EventForm({ onSubmit, initialData }) {
     }
   };
 
+  useEffect(() => {
+    if (initialData) {
+      setOpened(true);  // 수정 모드일 때 모달 자동으로 열기
+      setFormData({
+        ...initialData,
+        start_date: initialData.start_date? new Date(initialData.start_date) : null,
+        end_date: initialData.end_date? new Date(initialData.end_date) : null,
+      });
+    }
+  }, [initialData]);
+
   // 위치정보 펼치기/접기 핸들러
   const handleLocationPickerToggle = () => {
     setShowLocationPicker(!showLocationPicker);
@@ -147,16 +158,39 @@ export default function EventForm({ onSubmit, initialData }) {
     }
   };
 
+  const handleClose = () => {
+    setOpened(false);
+    setShowLocationPicker(false);
+    setFormData({
+      name: '',
+      description: null,
+      start_date: new Date(),
+      end_date: new Date(),
+      open_time: '10:00',
+      close_time: '20:00',
+      address: null,
+      road_address: null,
+      jibun_address: null,
+      address_detail: null,
+      lat: null,
+      lng: null,
+      need_reservation: false,
+      category: '',
+      district: null,
+      url: null,
+      content: null
+    });
+    onClose?.(); // 부모 컴포넌트에도 알림
+  };
   return (
     <>
       <Button variant="outline" onClick={() => setOpened(true)}>
-        이벤트 {initialData ? '수정' : '추가'}
+        이벤트 추가
       </Button>
       <Modal
-        opened={opened}
+        opened={initialData ? true : opened}
         onClose={() => {
-          setOpened(false);
-          setShowLocationPicker(false); // 모달이 닫힐 때 위치정보도 접기
+          handleClose();
         }}
         title={`이벤트 ${initialData ? '수정' : '추가'}`}
         size="xl"

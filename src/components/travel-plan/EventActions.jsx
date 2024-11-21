@@ -3,7 +3,7 @@ import { IconDots, IconEdit, IconTrash } from '@tabler/icons-react';
 import { useState } from "react";
 import { notifications } from '@mantine/notifications';
 
-export function EventActions({ event, onEdit, onDelete, type = 'event'  }) {
+export function EventActions({ item, onEdit, onDelete, type = 'event'  }) {
     const [isDeleting, setIsDeleting] = useState(false)
 
     const handleDelete = async (id, type) => {
