@@ -13,6 +13,7 @@ import {
   NumberInput
 } from '@mantine/core';
 import { DateTimePicker } from '@mantine/dates';
+import {formatDateForDB} from '@/util/formatter'
 
 export default function VisitForm({ eventId, onSubmit, initialData }) {
   const [opened, setOpened] = useState(false);

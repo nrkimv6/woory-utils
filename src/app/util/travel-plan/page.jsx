@@ -345,7 +345,7 @@ const KakaoMapList = () => {
               <MapView
                 items={filteredItems}
                 selectedLocation={selectedLocation}
-                activeTab={tabValue}
+                type={tabValue}
               />
             </div>
           </Tabs.Panel>
