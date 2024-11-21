@@ -1,7 +1,7 @@
 "use client"
 import React, { useEffect, useState } from 'react';
-import { Card, Select, Stack, Group, Tabs, Text, Badge } from '@mantine/core';
-import { DatePicker } from '@mantine/dates';
+import { Card, Select, Stack, Group, Tabs, Text, Badge, Button } from '@mantine/core';
+import { DateInput } from '@mantine/dates';
 import { format } from 'date-fns';
 import { eventApi, visitApi } from '@/lib/travel-plan/api';
 
@@ -36,6 +36,7 @@ const KakaoMapList = () => {
   const [events, setEvents] = useState([]);
   const [visits, setVisits] = useState([]);
   const [activeTab, setActiveTab] = useState("events");
+  const [editingEvent, setEditingEvent] = useState(null);
 
 
   // 이벤트 목록 조회
@@ -220,7 +221,11 @@ const KakaoMapList = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
       <Group position="right" p="md">
-        <EventForm map={map} onSubmit={handleEventSubmit} />
+        <EventForm
+          map={map}
+          onSubmit={handleEventSubmit}
+          initialData={editingEvent}
+        />
         {selectedLocation && (
           <VisitForm eventId={selectedLocation.id} onSubmit={handleVisitSubmit} />
         )}
@@ -236,9 +241,11 @@ const KakaoMapList = () => {
           <div style={{ padding: '1rem', background: 'white', borderBottom: '1px solid #eee' }}>
             <Group align="flex-start" spacing="md">
               <div style={{ width: '256px' }}>
-                <DatePicker
+                <DateInput
                   value={selectedDate}
                   onChange={setSelectedDate}
+                  placeholder="날짜 선택"
+                  valueFormat="YYYY-MM-DD"
                 />
               </div>
 
@@ -310,13 +317,13 @@ const KakaoMapList = () => {
               </Stack>
             </div>
             <div style={{ width: '66.666%', position: 'relative' }}>
-<div id="map" style={{ 
-  width: '100%', 
-  height: '100%',  // 66.666%에서 100%로 변경
-  position: 'absolute',
-  top: 0,
-  left: 0
-}} />
+              <div id="map" style={{
+                width: '100%',
+                height: '100%',  // 66.666%에서 100%로 변경
+                position: 'absolute',
+                top: 0,
+                left: 0
+              }} />
 
               {selectedLocation && (
                 <Card
@@ -356,7 +363,115 @@ const KakaoMapList = () => {
         </Tabs.Panel>
 
         <Tabs.Panel value="visits">
-          {/* 방문 계획 탭의 유사한 구조 */}
+          {/* 필터링 섹션 */}
+          <div style={{ padding: '1rem', background: 'white', borderBottom: '1px solid #eee' }}>
+            <Group align="flex-start" spacing="md">
+              <div style={{ width: '256px' }}>
+                <DateInput
+                  value={selectedDate}
+                  onChange={setSelectedDate}
+                  placeholder="날짜 선택"
+                  valueFormat="YYYY-MM-DD"
+                />
+              </div>
+
+              <Stack spacing="sm">
+                <Select
+                  data={[
+                    { value: 'all', label: '전체' },
+                    ...categories.map(cat => ({ value: cat, label: cat }))
+                  ]}
+                  value={selectedCategory}
+                  onChange={setSelectedCategory}
+                  placeholder="카테고리 선택"
+                />
+
+                <Select
+                  data={[
+                    { value: 'all', label: '전체' },
+                    ...districts.map(district => ({ value: district, label: district }))
+                  ]}
+                  value={selectedDistrict}
+                  onChange={setSelectedDistrict}
+                  placeholder="지역 선택"
+                />
+              </Stack>
+            </Group>
+          </div>
+
+          {/* 메인 콘텐츠 */}
+          <div style={{ display: 'flex', flex: 1 }}>
+            <div style={{ width: '33.333%', padding: '1rem', overflowY: 'auto' }}>
+              <Stack spacing="md">
+                {filteredLocations.map((visit, index) => (
+                  <Card key={visit.id} shadow="sm" padding="md">
+                    <Group align="flex-start" noWrap>
+                      <LocationMarker
+                        index={index}
+                        isEvent={false}
+                        color={PASTEL_COLORS[index % PASTEL_COLORS.length]}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <Text size="lg" fw={500}>{visit.tp_events?.name}</Text>
+                        <Stack spacing="xs" mt="md">
+                          <Text size="sm">방문예정: {format(new Date(visit.visit_time), 'yyyy-MM-dd HH:mm')}</Text>
+                          <Text size="sm">방문순서: {visit.visit_order}</Text>
+                          {visit.is_reserved && (
+                            <Text size="sm">
+                              예약시간: {format(new Date(visit.reservation_time), 'yyyy-MM-dd HH:mm')}
+                            </Text>
+                          )}
+                          <Group spacing="xs">
+                            {visit.is_important && (
+                              <Badge variant="filled" color="red">
+                                중요
+                              </Badge>
+                            )}
+                            {visit.is_reserved && (
+                              <Badge variant="filled" color="green">
+                                예약완료
+                              </Badge>
+                            )}
+                          </Group>
+                          {visit.notes && (
+                            <Text size="sm" style={{ whiteSpace: 'pre-line' }}>
+                              {visit.notes}
+                            </Text>
+                          )}
+                        </Stack>
+                      </div>
+                    </Group>
+                    <Group position="right" mt="md">
+                      {visit.reservation_url && (
+                        <Button
+                          variant="light"
+                          component="a"
+                          href={visit.reservation_url}
+                          target="_blank"
+                        >
+                          예약 페이지
+                        </Button>
+                      )}
+                      {visit.reference_url && (
+                        <Button
+                          variant="light"
+                          component="a"
+                          href={visit.reference_url}
+                          target="_blank"
+                        >
+                          참고 링크
+                        </Button>
+                      )}
+                    </Group>
+                  </Card>
+                ))}
+              </Stack>
+            </div>
+
+            <div style={{ width: '66.666%', position: 'relative' }}>
+              <div id="map" style={{ width: '100%', height: '100%', position: 'absolute' }} />
+            </div>
+          </div>
         </Tabs.Panel>
       </Tabs>
     </div>
