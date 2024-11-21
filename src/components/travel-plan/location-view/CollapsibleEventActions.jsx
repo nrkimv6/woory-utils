@@ -1,7 +1,8 @@
-import { Menu, Button, Group } from '@mantine/core';
+import { Menu, Button, Group, ActionIcon } from '@mantine/core';
 import { IconDots, IconEdit, IconTrash } from '@tabler/icons-react';
 import { useState } from "react";
 import { notifications } from '@mantine/notifications';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
 export function EventActions({ item, onEdit, onDelete, type = 'event'  }) {
     const [isDeleting, setIsDeleting] = useState(false)
@@ -12,13 +13,13 @@ export function EventActions({ item, onEdit, onDelete, type = 'event'  }) {
             await onDelete(id, type);
             notifications.show({
                 title: "삭제 완료",
-                message: "이벤트가 삭제되었습니다.",
+                message: "삭제되었습니다.",
                 color: "green"
             });
         } catch (error) {
             notifications.show({
                 title: "삭제 실패",
-                message: "이벤트 삭제에 실패했습니다.",
+                message: "삭제에 실패했습니다.",
                 color: "red"
             });
         } finally {
@@ -86,3 +87,22 @@ export function EventActions({ item, onEdit, onDelete, type = 'event'  }) {
     </Group>
   );
 };
+
+
+const CollapsibleEventActions = ({ isExpanded, onToggle, item, onEdit, onDelete, type }) => (
+  <>
+    <ActionIcon 
+      size="sm" 
+      onClick={(e) => {
+        e.stopPropagation();
+        onToggle(e);
+      }}
+      style={{ position: 'absolute', right: 10, top: 10 }}
+    >
+      {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+    </ActionIcon>
+    {isExpanded && <EventActions item={item} onEdit={onEdit} onDelete={onDelete} type={type} />}
+  </>
+);
+
+export default CollapsibleEventActions;

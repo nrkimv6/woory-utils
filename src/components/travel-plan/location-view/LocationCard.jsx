@@ -1,26 +1,27 @@
+import React, { useEffect, useState } from 'react';
 import { Card, Select, Stack, Group, Tabs, Text, Badge, Button } from '@mantine/core';
-import { EventCardContent} from '../EventCardContent';
-import { VisitCardContent} from '../VisitCardContent';
+import { EventCardContent } from '../EventCardContent';
+import { VisitCardContent } from '../VisitCardContent';
 import LocationMarker from '@/components/travel-plan/LocationMarker';
-import { EventActions } from '@/components/travel-plan/EventActions'
+import CollapsibleEventActions from '@/components/travel-plan/location-view/CollapsibleEventActions'
 
-export const LocationCard = ({ 
-  item, 
-  index, 
-  isSelected, 
-  isEvent, 
-  onClick, 
-  onEdit, 
+export const LocationCard = ({
+  item,
+  index,
+  isSelected,
+  isEvent,
+  onClick,
+  onEdit,
   onDelete,
   type,
-  color 
+  color
 }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
   const cardContent = isEvent ? (
     <EventCardContent item={item} />
   ) : (
     <VisitCardContent item={item} />
   );
-
   return (
     <Card
       shadow="sm"
@@ -40,12 +41,19 @@ export const LocationCard = ({
         />
         {cardContent}
       </Group>
-      <EventActions
-        item={item}
-        onEdit={onEdit}
-        onDelete={onDelete}
-        type={type}
-      />
+      {isSelected && (
+        <CollapsibleEventActions
+          item={item}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          type={type}
+          isExpanded={isExpanded}
+          onToggle={(e) => {
+            e.stopPropagation();
+            setIsExpanded(!isExpanded);
+          }}
+        />
+      )}
     </Card>
   );
 };

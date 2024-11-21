@@ -110,11 +110,15 @@ const KakaoMapList = () => {
 
   const handleVisitSubmit = async (visitData) => {
     try {
+      const prepareVisitData = (visitData) => {
+        const { tp_events, ...visitDataWithoutEvents } = visitData;
+        return visitDataWithoutEvents;
+      };
       if (editingVisit) {
-        await visitApi.updateVisit(editingVisit.id, visitData);
+        await visitApi.updateVisit(editingVisit.id, prepareVisitData(visitData));
         showSuccess("방문 계획이 수정되었습니다.");
       } else {
-        await visitApi.addVisit(visitData);
+        await visitApi.addVisit(prepareVisitData(visitData));
         showSuccess("방문 계획이 추가되었습니다.");
       }
       fetchVisits();
@@ -176,17 +180,17 @@ const KakaoMapList = () => {
               onFilterChange={handleFilterChange}
             />
             <div style={{ display: 'flex', flex: 1 }}>
-            { activeTab == tabValue ? 
-              <LocationView
-                items={filteredItems}
-                activeTab={tabValue}
-                selectedItem={tabValue === "events" ? selectedEvent : selectedVisit}
-                onItemClick={tabValue === "events" ? handleEventClick : handleVisitClick}
-                onItemEdit={tabValue === "events" ? setEditingEvent : setEditingVisit}
-                onItemDelete={(id) => handleDelete(id, tabValue)}
-                type={tabValue}
-                date={filters.date}
-              />:<></>}
+              {activeTab == tabValue ?
+                <LocationView
+                  items={filteredItems}
+                  activeTab={tabValue}
+                  selectedItem={tabValue === "events" ? selectedEvent : selectedVisit}
+                  onItemClick={tabValue === "events" ? handleEventClick : handleVisitClick}
+                  onItemEdit={tabValue === "events" ? setEditingEvent : setEditingVisit}
+                  onItemDelete={(id) => handleDelete(id, tabValue)}
+                  type={tabValue}
+                  date={filters.date}
+                /> : <></>}
               <MapView
                 items={filteredItems}
                 selectedLocation={selectedLocation}

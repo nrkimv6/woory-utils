@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { Card, Text, Badge, ScrollArea, Stack, Group, Button  } from '@mantine/core';
 import { format } from 'date-fns';
+import CollapsibleEventActions from '@/components/travel-plan/location-view/CollapsibleEventActions'
 
-const TimeCard = ({ visit, index, isSelected, onClick, onEdit, onDelete }) => {
+export const TimeCard = ({ visit, index, isSelected, onClick, onEdit, onDelete }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
   return (
     <Card 
       key={visit.id} 
@@ -19,8 +22,7 @@ const TimeCard = ({ visit, index, isSelected, onClick, onEdit, onDelete }) => {
         backgroundColor: isSelected ? '#f0f7ff' : 'white',
         border: isSelected ? '2px solid #228be6' : '1px solid #dee2e6',
         cursor: 'pointer',
-        zIndex: isSelected ? 1000 : index,
-        transition: 'all 0.2s ease'
+        zIndex: isSelected ? 100 : index,
       }}
     >
       <Text weight={500} size="sm" mb="xs">
@@ -29,41 +31,29 @@ const TimeCard = ({ visit, index, isSelected, onClick, onEdit, onDelete }) => {
       <Text size="sm" color="dimmed" mb="xs" lineClamp={1}>
         {visit.tp_events?.description}
       </Text>
-      <Group position="apart">
-        <Group spacing={5}>
-          {visit.tp_events?.tags?.split(',').map((tag, index) => (
-            <Badge key={index} size="sm" variant="outline">
-              {tag.trim()}
-            </Badge>
-          ))}
-        </Group>
-        <Group spacing={5}>
-          <Button 
-            variant="subtle" 
-            size="xs" 
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit(visit);
-            }}
-          >
-            Edit
-          </Button>
-          <Button 
-            variant="subtle" 
-            color="red" 
-            size="xs" 
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(visit.id);
-            }}
-          >
-            Delete
-          </Button>
-        </Group>
+      <Group spacing={5}>
+        {visit.tp_events?.tags?.split(',').map((tag, index) => (
+          <Badge key={index} size="sm" variant="outline">
+            {tag.trim()}
+          </Badge>
+        ))}
       </Group>
+      {isSelected && (
+        <CollapsibleEventActions
+          item={visit}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          isExpanded={isExpanded}
+          onToggle={(e) => {
+            e.stopPropagation();
+            setIsExpanded(!isExpanded);
+          }}
+        />
+      )}
     </Card>
   );
 };
+
 
 const TimeSlot = ({ time, visits, selectedItem, onItemClick, onItemEdit, onItemDelete }) => {
   const formattedTime = format(time, 'HH:mm');
