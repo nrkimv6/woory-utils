@@ -70,13 +70,13 @@ export const showNotification = (type, message, title, timeout=5000) => {
     ...config,
     title,
     message,
-    autoClose: timeout,
+    autoClose: timeout-500,
     timeout: timeout // timeout 명시적 지정
   });
 };
 
-export const showSuccess = (message, title = '성공',timeout=2500) => 
-  showNotification('success', message, title);
+export const showSuccess = (message, title = '성공',timeout=2000) => 
+  showNotification('success', message, title, timeout);
 
 export const showError = (message, title = '오류') => 
   showNotification('error', message, title);

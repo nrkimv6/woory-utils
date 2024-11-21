@@ -18,30 +18,35 @@ export function Providers({ children }: { children: React.ReactNode }) {
                 },
               },
             },
-          },
-          Notifications: {
-            styles: (theme) => ({
-              root: {
-                position: 'fixed !important',
-                top: '0 !important',
-                right: '0 !important',
-                left: 'auto !important',
-                transform: 'none !important',
-                alignItems: 'flex-start !important',
-                width: '300px !important',
-                margin: '1rem !important'
-              }
-            })
           }
         },
       }}>
-      <Notifications
-        position="top-right"
-        limit={3}
-        autoClose={5000}
-      />
       <ModalsProvider>
-        {children}
+        <div style={{ position: 'relative' }}>
+          <Notifications
+            classNames={{
+              root: 'notifications-root',
+              notification: 'notification-item'
+            }}
+          />
+          <style jsx global>{`
+            .notifications-root {
+              position: fixed !important;
+              top: 16px !important;
+              right: 16px !important;
+              left: auto !important;
+              bottom: auto !important;
+              width: 320px !important;
+              z-index: 9999 !important;
+              transform: none !important;
+            }
+            .notification-item {
+              width: 100% !important;
+              margin: 0 0 8px 0 !important;
+            }
+          `}</style>
+          {children}
+        </div>
       </ModalsProvider>
     </MantineProvider>
   );
