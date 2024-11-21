@@ -2,29 +2,32 @@ import { useEffect,useState } from 'react';
 import { Card, Select, Stack, Group, Tabs, Text, Badge, Button } from '@mantine/core';
 import { EventDetailView} from './EventDetailView';
 import { VisitDetailView} from './VisitDetailView';
+import { useKakaoLoader } from '@/hooks/useKakaoLoader';
+import {PASTEL_COLORS} from '@/util/colors'
 
 export const MapView = ({ items, selectedLocation, type, onLocationSelect }) => {
   const [map, setMap] = useState(null);
-  const [marker, setMarker] = useState(null);  // form type용 단일 마커
+  const [marker, setMarker] = useState(null);
   const [customOverlays, setCustomOverlays] = useState([]);
+  const isKakaoLoaded = useKakaoLoader();
   const mapId = `map-${type}`;
 
-  // 지도 초기화
   useEffect(() => {
+    if (!isKakaoLoaded) return;
+
     const container = document.getElementById(mapId);
     if (!container) return;
 
     const options = {
       center: new kakao.maps.LatLng(37.5665, 126.9780),
-      level: 3  // form type일 때는 더 확대된 뷰
+      level: 3
     };
 
-    const kakaoMap = new kakao.maps.Map(container, options);
+    const kakaoMap = new window.kakao.maps.Map(container, options);
     setMap(kakaoMap);
 
-    // form type인 경우 클릭 이벤트 추가
     if (type === 'form') {
-      const clickListener = kakao.maps.event.addListener(
+      const clickListener = window.kakao.maps.event.addListener(
         kakaoMap,
         'click',
         (mouseEvent) => {
@@ -52,13 +55,14 @@ export const MapView = ({ items, selectedLocation, type, onLocationSelect }) => 
       );
 
       return () => {
-        kakao.maps.event.removeListener(clickListener);
+        window.kakao.maps.event.removeListener(clickListener);
         if (marker) {
           marker.setMap(null);
         }
       };
     }
-  }, [mapId, type]);
+  }, [mapId, type, isKakaoLoaded]);
+
 
   // 목록 표시용 마커 업데이트 (form type이 아닐 때만)
   useEffect(() => {
@@ -75,7 +79,6 @@ export const MapView = ({ items, selectedLocation, type, onLocationSelect }) => 
       if (lat && lng) {
         const position = new kakao.maps.LatLng(lat, lng);
         bounds.extend(position);
-
 
         const customOverlay = new kakao.maps.CustomOverlay({
           position: position,
