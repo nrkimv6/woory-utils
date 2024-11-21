@@ -7,24 +7,11 @@ import { eventApi, visitApi } from '@/lib/travel-plan/api';
 
 import EventForm from '@/components/travel-plan/EventForm';
 import VisitForm from '@/components/travel-plan/VisitForm';
-import LocationMarker from '@/components/travel-plan/LocationMarker';
-import { EventActions } from '@/components/travel-plan/EventActions'
 import { Filters } from '@/components/travel-plan/Filters';
 import { LocationList } from '@/components/travel-plan/LocationList';
 import { MapView } from '@/components/travel-plan/MapView';
-import {useLocationFilter} from '@/hooks/travel-plan/useLocationFilter'
-
-const PASTEL_COLORS = [
-  '#FFB3BA', // 파스텔 핑크
-  '#BAFFC9', // 파스텔 그린
-  '#BAE1FF', // 파스텔 블루
-  '#FFFFBA', // 파스텔 옐로우
-  '#FFB3F7', // 파스텔 퍼플
-  '#E0BBE4', // 라벤더
-  '#957DAD', // 라이트 퍼플
-  '#FEC8D8'  // 라이트 핑크
-];
-
+import { useLocationFilter } from '@/hooks/travel-plan/useLocationFilter'
+import {PASTEL_COLORS} from '@/util/colors'
 
 const KakaoMapList = () => {
 
@@ -178,50 +165,67 @@ const KakaoMapList = () => {
   //     });
   //   };
   // }, []);
-useEffect(() => {
-  // 카카오맵 스크립트 로드
-  const script = document.createElement('script');
-  script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=ca0816bee0db23ce6c74a1cb0c58b9b4&autoload=false`;
-  document.head.appendChild(script);
+  useEffect(() => {
+    // 카카오맵 스크립트 로드
+    const script = document.createElement('script');
+    script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=ca0816bee0db23ce6c74a1cb0c58b9b4&autoload=false`;
+    document.head.appendChild(script);
 
-  script.onload = () => {
-    kakao.maps.load(() => {
-      // 현재 활성 탭에 해당하는 map element 선택
-      const container = document.getElementById(`map-${activeTab}`);
-      if (!container) return;
+    script.onload = () => {
+      kakao.maps.load(() => {
+        // 현재 활성 탭에 해당하는 map element 선택
+        const container = document.getElementById(`map-${activeTab}`);
+        if (!container) return;
 
-      const options = {
-        center: new kakao.maps.LatLng(37.5665, 126.9780),
-        level: 7
-      };
-      const kakaoMap = new kakao.maps.Map(container, options);
-      setMap(kakaoMap);
+        const options = {
+          center: new kakao.maps.LatLng(37.5665, 126.9780),
+          level: 7
+        };
+        const kakaoMap = new kakao.maps.Map(container, options);
+        setMap(kakaoMap);
+      });
+    };
+  }, [activeTab]);
+
+  useEffect(() => {
+    setFilteredLocations(filteredItems);
+  }, [filteredItems]);
+
+  const fitBoundsToMarkers = (map, locations) => {
+    if (!locations?.length) return;
+
+    const bounds = new kakao.maps.LatLngBounds();
+
+    locations.forEach(location => {
+      const lat = activeTab === "events" ? location.lat : location.tp_events?.lat;
+      const lng = activeTab === "events" ? location.lng : location.tp_events?.lng;
+
+      if (lat && lng) {
+        bounds.extend(new kakao.maps.LatLng(lat, lng));
+      }
     });
-  };
-}, [activeTab]);
 
-useEffect(() => {
-  setFilteredLocations(filteredItems);
-}, [filteredItems]);
+    map.setBounds(bounds);
+  };
 
   const updateMarkers = (locations) => {
-  if (!map) return;
+    if (!map) return;
 
-  customOverlays.forEach(overlay => overlay.setMap(null));
-  const newOverlays = [];
+    customOverlays.forEach(overlay => overlay.setMap(null));
+    const newOverlays = [];
 
-  locations.forEach((location, index) => {
-    // 방문 계획일 경우 연결된 이벤트의 좌표 사용
-    const lat = activeTab === "events" ? location.lat : location.tp_events?.lat;
-    const lng = activeTab === "events" ? location.lng : location.tp_events?.lng;
+    locations.forEach((location, index) => {
+      // 방문 계획일 경우 연결된 이벤트의 좌표 사용
+      const lat = activeTab === "events" ? location.lat : location.tp_events?.lat;
+      const lng = activeTab === "events" ? location.lng : location.tp_events?.lng;
 
-    if (lat && lng) {
-      const position = new window.kakao.maps.LatLng(lat, lng);
-      const markerText = activeTab === "events"
-        ? String.fromCharCode(65 + index)
-        : (index + 1).toString();
+      if (lat && lng) {
+        const position = new window.kakao.maps.LatLng(lat, lng);
+        const markerText = activeTab === "events"
+          ? String.fromCharCode(65 + index)
+          : (index + 1).toString();
 
-      const markerContent = `
+        const markerContent = `
         <div style="
           background: ${PASTEL_COLORS[index % PASTEL_COLORS.length]};
           padding: 5px 10px;
@@ -248,19 +252,20 @@ useEffect(() => {
         </div>
       `;
 
-      const customOverlay = new window.kakao.maps.CustomOverlay({
-        position: position,
-        content: markerContent,
-        map: map,
-        yAnchor: 1.3
-      });
+        const customOverlay = new window.kakao.maps.CustomOverlay({
+          position: position,
+          content: markerContent,
+          map: map,
+          yAnchor: 1.3
+        });
 
-      newOverlays.push(customOverlay);
-    }
-  });
+        newOverlays.push(customOverlay);
+      }
+    });
 
-  setCustomOverlays(newOverlays);
-};
+    setCustomOverlays(newOverlays);
+    fitBoundsToMarkers(map, locations);
+  };
 
   // 위치 클릭 핸들러
   const handleLocationClick = (location) => {
