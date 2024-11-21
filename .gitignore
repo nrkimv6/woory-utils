@@ -43,3 +43,7 @@ temp/*
 tree*.txt
 *.*-old
 *.*-ver*
+src/app/util/gcalender-addon/
+src/lib/gcalender-addon/
+
+archive

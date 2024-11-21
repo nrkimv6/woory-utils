@@ -20,7 +20,7 @@ import { DatePicker, TimeInput } from '@mantine/dates';
 import { notifications } from '@mantine/notifications';
 
 export default function EventForm({ map, onSubmit, initialData }) {
-  const [opened, setOpened] = useState(true);
+  const [opened, setOpened] = useState(false);
   const [formData, setFormData] = useState(initialData || {
     name: '',
     description: null,

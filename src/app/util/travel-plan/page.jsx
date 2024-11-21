@@ -37,6 +37,49 @@ const KakaoMapList = () => {
   const [visits, setVisits] = useState([]);
   const [activeTab, setActiveTab] = useState("events");
   const [editingEvent, setEditingEvent] = useState(null);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [selectedVisit, setSelectedVisit] = useState(null);
+
+  // 이벤트 카드 클릭 핸들러
+  const handleEventClick = (event) => {
+    setSelectedEvent(event);
+    setSelectedLocation(event);
+    if (map && event.lat && event.lng) {
+      const moveLatLon = new window.kakao.maps.LatLng(event.lat, event.lng);
+      map.panTo(moveLatLon);
+    }
+  };
+
+  // 방문계획 카드 클릭 핸들러
+  const handleVisitClick = (visit) => {
+    setSelectedVisit(visit);
+    // visit.tp_events에 연결된 이벤트 정보가 있으므로 이를 이용
+    if (visit.tp_events) {
+      setSelectedLocation(visit.tp_events);
+      if (map && visit.tp_events.lat && visit.tp_events.lng) {
+        const moveLatLon = new window.kakao.maps.LatLng(
+          visit.tp_events.lat,
+          visit.tp_events.lng
+        );
+        map.panTo(moveLatLon);
+      }
+    }
+  };
+
+// 탭 변경 핸들러 수정
+const handleTabChange = (value) => {
+  setActiveTab(value);
+  setSelectedEvent(null);
+  setSelectedVisit(null);
+  setSelectedLocation(null);
+  
+  // 탭에 따른 데이터 로드
+  if (value === "events") {
+    fetchEvents();
+  } else {
+    fetchVisits();
+  }
+};
 
 
   // 이벤트 목록 조회
@@ -81,7 +124,18 @@ const KakaoMapList = () => {
 
   useEffect(() => {
     fetchEvents();
+    fetchVisits();
   }, []);
+
+  
+// 초기 로드도 수정
+useEffect(() => {
+  if (activeTab === "events") {
+    fetchEvents();
+  } else {
+    fetchVisits();
+  }
+}, [activeTab]);
 
   useEffect(() => {
     // 카카오맵 스크립트 로드
@@ -214,6 +268,16 @@ const KakaoMapList = () => {
   }, [map]); // map이 생성되면 마커 표시
 
 
+  // 날짜 포맷팅 헬퍼 함수 추가
+  const formatDateTime = (dateStr) => {
+    if (!dateStr) return '-';
+    try {
+      return format(new Date(dateStr), 'yyyy-MM-dd HH:mm');
+    } catch (e) {
+      return '-';
+    }
+  };
+
   // 필터링된 locations이 변경될 때 마커 업데이트
   useEffect(() => {
     updateMarkers(filteredLocations);
@@ -227,10 +291,14 @@ const KakaoMapList = () => {
           initialData={editingEvent}
         />
         {selectedLocation && (
-          <VisitForm eventId={selectedLocation.id} onSubmit={handleVisitSubmit} />
+          // <VisitForm eventId={selectedLocation.id} onSubmit={handleVisitSubmit} />
+          <VisitForm
+            eventId={selectedEvent?.id || selectedVisit?.tp_events?.id}
+            onSubmit={handleVisitSubmit}
+          />
         )}
       </Group>
-      <Tabs value={activeTab} onChange={setActiveTab}>
+      <Tabs value={activeTab} onChange={handleTabChange}>
         <Tabs.List>
           <Tabs.Tab value="events">이벤트 목록</Tabs.Tab>
           <Tabs.Tab value="visits">방문 계획</Tabs.Tab>
@@ -279,7 +347,14 @@ const KakaoMapList = () => {
               <Stack spacing="md">
 
                 {filteredLocations.map((location, index) => (
-                  <Card key={location.id} shadow="sm" padding="md">
+                  <Card key={location.id} shadow="sm" padding="md"
+                    onClick={() => handleEventClick(location)}
+
+                    style={{
+                      cursor: 'pointer',
+                      backgroundColor: selectedEvent?.id === location.id ? '#f0f7ff' : 'white',
+                      border: selectedEvent?.id === location.id ? '2px solid #228be6' : '1px solid #dee2e6'
+                    }}>
                     <Group align="flex-start" noWrap>
                       <LocationMarker
                         index={index}
@@ -316,7 +391,8 @@ const KakaoMapList = () => {
                 ))}
               </Stack>
             </div>
-            <div style={{ width: '66.666%', position: 'relative' }}>
+            {/* <div style={{ width: '66.666%', position: 'relative' }}> */}
+            <div style={{ width: '66.666%', position: 'relative', height: '600px' }}>
               <div id="map" style={{
                 width: '100%',
                 height: '100%',  // 66.666%에서 100%로 변경
@@ -332,7 +408,9 @@ const KakaoMapList = () => {
                     bottom: 0,
                     width: '100%',
                     padding: '1rem',
-                    background: 'white'
+                    background: 'white',
+                    maxHeight: '200px',  // 상세정보 높이 제한
+                    overflowY: 'auto'    // 내용이 많을 경우 스크롤
                   }}
                 >
                   <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
@@ -404,7 +482,14 @@ const KakaoMapList = () => {
             <div style={{ width: '33.333%', padding: '1rem', overflowY: 'auto' }}>
               <Stack spacing="md">
                 {filteredLocations.map((visit, index) => (
-                  <Card key={visit.id} shadow="sm" padding="md">
+                  <Card key={visit.id} shadow="sm" padding="md"
+                    onClick={() => handleVisitClick(visit)}
+
+                    style={{
+                      cursor: 'pointer',
+                      backgroundColor: selectedVisit?.id === visit.id ? '#f0f7ff' : 'white',
+                      border: selectedVisit?.id === visit.id ? '2px solid #228be6' : '1px solid #dee2e6'
+                    }}>
                     <Group align="flex-start" noWrap>
                       <LocationMarker
                         index={index}
@@ -414,11 +499,11 @@ const KakaoMapList = () => {
                       <div style={{ flex: 1 }}>
                         <Text size="lg" fw={500}>{visit.tp_events?.name}</Text>
                         <Stack spacing="xs" mt="md">
-                          <Text size="sm">방문예정: {format(new Date(visit.visit_time), 'yyyy-MM-dd HH:mm')}</Text>
-                          <Text size="sm">방문순서: {visit.visit_order}</Text>
-                          {visit.is_reserved && (
+                          <Text size="sm">방문예정: {formatDateTime(visit.visit_time)}</Text>
+                          <Text size="sm">방문순서: {visit.visit_order || '-'}</Text>
+                          {visit.is_reserved && visit.reservation_time && (
                             <Text size="sm">
-                              예약시간: {format(new Date(visit.reservation_time), 'yyyy-MM-dd HH:mm')}
+                              예약시간: {formatDateTime(visit.reservation_time)}
                             </Text>
                           )}
                           <Group spacing="xs">
@@ -467,8 +552,7 @@ const KakaoMapList = () => {
                 ))}
               </Stack>
             </div>
-
-            <div style={{ width: '66.666%', position: 'relative' }}>
+            <div style={{ width: '66.666%', position: 'relative', height: '600px' }}>
               <div id="map" style={{ width: '100%', height: '100%', position: 'absolute' }} />
             </div>
           </div>
