@@ -30,6 +30,8 @@ export default function EventForm({ onSubmit, initialData }) {
   const [geocoder, setGeocoder] = useState(null);
   const isKakaoLoaded = useKakaoLoader();
 
+  const [addressResults, setAddressResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
   const [formData, setFormData] = useState(initialData || {
     name: '',
     description: null,
@@ -54,24 +56,37 @@ export default function EventForm({ onSubmit, initialData }) {
     if (!isKakaoLoaded) return;
     setGeocoder(new window.kakao.maps.services.Geocoder());
   }, [isKakaoLoaded]);
-  // 주소 검색 처리
-  const handleAddressSearch = () => {
+
+  const handleAddressSearch = async (e) => {
+    e?.preventDefault(); // 폼 제출 방지
     if (!geocoder || !formData.address) return;
 
+    setIsSearching(true);
     geocoder.addressSearch(formData.address, (result, status) => {
+      setIsSearching(false);
       if (status === window.kakao.maps.services.Status.OK) {
-        const lat = Number(result[0].y);
-        const lng = Number(result[0].x);
-
-        setFormData(prev => ({
-          ...prev,
-          lat: lat,
-          lng: lng,
-          road_address: result[0].road_address?.address_name || '',
-          jibun_address: result[0].address.address_name || ''
-        }));
+        if (result.length === 1) {
+          // 결과가 하나면 바로 적용
+          applyAddressResult(result[0]);
+        } else {
+          // 여러 결과가 있으면 목록 표시
+          setAddressResults(result);
+        }
       }
     });
+  };
+
+  // 선택된 주소 결과 적용
+  const applyAddressResult = (selected) => {
+    setFormData(prev => ({
+      ...prev,
+      lat: Number(selected.y),
+      lng: Number(selected.x),
+      road_address: selected.road_address?.address_name || '',
+      jibun_address: selected.address.address_name || '',
+      address: selected.road_address?.address_name || selected.address.address_name
+    }));
+    setAddressResults([]); // 검색 결과 목록 닫기
   };
 
   const handleLocationSelect = (latlng) => {
@@ -92,7 +107,6 @@ export default function EventForm({ onSubmit, initialData }) {
       }
     });
   };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -137,7 +151,6 @@ export default function EventForm({ onSubmit, initialData }) {
         size="xl"
       >
         <form onSubmit={handleSubmit}>
-
           <Stack spacing="md">
             <Grid>
               <Grid.Col span={6}>
@@ -226,19 +239,43 @@ export default function EventForm({ onSubmit, initialData }) {
                 </Group>
                 <Collapse in={showLocationPicker}>
                   <Paper shadow="sm" p="md" mt="md">
-                    <Group spacing="xs" mb="md">
+                    <form onSubmit={handleAddressSearch}>
+                      <Group spacing="xs" mb="md">
+                        <TextInput
+                          style={{ flex: 1 }}
+                          placeholder="주소 검색"
+                          value={formData.address || ''}
+                          onChange={(e) => {
+                            setFormData(prev => ({ ...prev, address: e.target.value }));
+                            setAddressResults([]); // 타이핑할 때 결과 목록 초기화
+                          }}
+                        />
+                        <Button type="submit" loading={isSearching}>검색</Button>
+                      </Group>
+                    </form>
 
-                      <TextInput
-                        style={{ flex: 1 }}
-                        placeholder="주소 검색"
-                        value={formData.address || ''}
-                        onChange={(e) => setFormData(prev => ({
-                          ...prev,
-                          address: e.target.value
-                        }))}
-                      />
-                      <Button onClick={handleAddressSearch}>검색</Button>
-                    </Group>
+                    {addressResults.length > 0 && (
+                      <Paper shadow="xs" p="xs" mb="md">
+                        <Stack spacing="xs">
+                          {addressResults.map((result, index) => (
+                            <Button
+                              key={index}
+                              variant="subtle"
+                              size="sm"
+                              onClick={() => applyAddressResult(result)}
+                            >
+                              {result.road_address?.address_name || result.address.address_name}
+                              {result.road_address && result.address && (
+                                <Text size="xs" color="dimmed" ml="xs">
+                                  ({result.address.address_name})
+                                </Text>
+                              )}
+                            </Button>
+                          ))}
+                        </Stack>
+                      </Paper>
+                    )}
+
                     <Box sx={{ height: 400 }}>
                       <MapView
                         items={[formData]}
@@ -254,7 +291,6 @@ export default function EventForm({ onSubmit, initialData }) {
                     )}
                   </Paper>
                 </Collapse>
-
               </Grid.Col>
 
               <Grid.Col span={6}>

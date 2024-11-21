@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { Card } from '@mantine/core';
 import { EventDetailView } from './EventDetailView';
 import { VisitDetailView } from './VisitDetailView';
@@ -9,92 +9,117 @@ export const MapView = ({ items, selectedLocation, type, onLocationSelect, onMar
   const [map, setMap] = useState(null);
   const [marker, setMarker] = useState(null);
   const [customOverlays, setCustomOverlays] = useState([]);
+  const [clickListener, setClickListener] = useState(null);
   const isKakaoLoaded = useKakaoLoader();
   const mapId = `map-${type}`;
   const isFormType = type === 'events-form';
+  const mapContainerRef = useRef(null);
 
-  // visible prop이 true가 될 때 맵 초기화
-  useEffect(() => {
-    if (!isKakaoLoaded || !visible) return;
+  // 지도 초기화
+  const initializeMap = useCallback(() => {
+    if (!isKakaoLoaded || !mapContainerRef.current) return;
 
-    const container = document.getElementById(mapId);
-    if (!container) return;
-
-    // 기존 맵 인스턴스가 있다면 제거
-    if (map) {
-      marker?.setMap(null);
-      customOverlays.forEach(overlay => overlay.setMap(null));
+    // 기존 리스너 및 마커 제거
+    if (clickListener) {
+      window.kakao.maps.event.removeListener(clickListener);
+      setClickListener(null);
     }
+    if (marker) {
+      marker.setMap(null);
+    }
+    customOverlays.forEach(overlay => overlay.setMap(null));
 
     const options = {
       center: new window.kakao.maps.LatLng(37.5665, 126.9780),
       level: isFormType ? 3 : 7
     };
 
-    const kakaoMap = new window.kakao.maps.Map(container, options);
-    setMap(kakaoMap);
+    // 새 맵 인스턴스 생성
+    const kakaoMap = new window.kakao.maps.Map(mapContainerRef.current, options);
 
-    // 초기 데이터 있으면 표시
-    if (isFormType && items?.[0]?.lat && items[0]?.lng) {
-      const position = new window.kakao.maps.LatLng(items[0].lat, items[0].lng);
-      updateFormMarker(position, kakaoMap);
-      kakaoMap.setCenter(position);
-    }
-
-    // form 타입일 경우 클릭 이벤트 리스너 추가
+    // 폼 타입일 경우 클릭 이벤트 설정
     if (isFormType && onLocationSelect) {
-      const clickListener = window.kakao.maps.event.addListener(
+      const listener = window.kakao.maps.event.addListener(
         kakaoMap,
         'click',
         (mouseEvent) => {
           const latlng = mouseEvent.latLng;
-          updateFormMarker(latlng);
+          if (marker) {
+            marker.setMap(null);
+          }
+          const newMarker = new window.kakao.maps.Marker({
+            position: latlng,
+            map: kakaoMap
+          });
+          setMarker(newMarker);
+          // 부드러운 이동 적용
+          kakaoMap.panTo(latlng);
           onLocationSelect(latlng);
         }
       );
-    return () => {
-      if (map) {
-        window.kakao.maps.event?.removeListener(clickListener);
-        marker?.setMap(null);
-        customOverlays.forEach(overlay => overlay.setMap(null));
-      }
-    };
+      setClickListener(listener);
     }
-  }, [isKakaoLoaded, visible]);
+
+    // 맵 인스턴스 저장
+    setMap(kakaoMap);
+
+    // 지도 사이즈 강제 리셋
+    setTimeout(() => {
+      kakaoMap.relayout();
+
+      // 초기 마커 표시 (폼 타입이고 위치가 있는 경우)
+      if (isFormType && items?.[0]?.lat && items[0]?.lng) {
+        const position = new window.kakao.maps.LatLng(items[0].lat, items[0].lng);
+        const newMarker = new window.kakao.maps.Marker({
+          position: position,
+          map: kakaoMap
+        });
+        setMarker(newMarker);
+        kakaoMap.setCenter(position);
+      }
+    }, 100);
+  }, [isKakaoLoaded, isFormType, onLocationSelect]);
 
 
-  // form 타입일 때 마커 업데이트 함수
-  const updateFormMarker = (position) => {
+  useEffect(() => {
+    if (!map || !isFormType || !items?.[0]?.lat || !items[0]?.lng) return;
+
+    const position = new window.kakao.maps.LatLng(items[0].lat, items[0].lng);
     if (marker) {
       marker.setMap(null);
     }
-
     const newMarker = new window.kakao.maps.Marker({
       position: position,
       map: map
     });
-
     setMarker(newMarker);
-  };
+    // 부드러운 이동 적용
+    map.panTo(position);
+  }, [items, map, isFormType]);
 
-  // form 타입일 때 items 변경 시 마커 업데이트 및 위치 이동
+  // visible이 true가 될 때마다 초기화
   useEffect(() => {
-    if (!map || !isFormType || !items?.length) return;
-
-    const item = items[0]; // form type은 항상 하나의 아이템만 받음
-    if (item.lat && item.lng) {
-      const position = new window.kakao.maps.LatLng(item.lat, item.lng);
-      updateFormMarker(position);
-      map.setCenter(position);
+    if (visible) {
+      initializeMap();
     }
-  }, [map, items, isFormType]);
 
+    // cleanup
+    return () => {
+      if (clickListener) {
+        window.kakao.maps.event.removeListener(clickListener);
+        setClickListener(null);
+      }
+      if (marker) {
+        marker.setMap(null);
+      }
+      customOverlays.forEach(overlay => overlay.setMap(null));
+    };
+  }, [visible, initializeMap]);
 
-  // ... 나머지 MapView 코드는 동일
-
-  // 마커/오버레이 업데이트 (일반 목록 표시용)
+  // 마커/오버레이 업데이트 (목록 표시용)
   useEffect(() => {
     if (!map || isFormType || !items?.length) return;
+
 
     // 기존 오버레이 제거
     customOverlays.forEach(overlay => overlay.setMap(null));
@@ -167,20 +192,8 @@ export const MapView = ({ items, selectedLocation, type, onLocationSelect, onMar
     if (newOverlays.length > 0) {
       map.setBounds(bounds);
     }
+
   }, [map, items, type]);
-
-  // 선택된 위치로 이동 (form이 아닐 때만)
-  useEffect(() => {
-    if (!map || !selectedLocation || isFormType) return;
-
-    const lat = type === "events" ? selectedLocation.lat : selectedLocation.tp_events?.lat;
-    const lng = type === "events" ? selectedLocation.lng : selectedLocation.tp_events?.lng;
-
-    if (lat && lng) {
-      const moveLatLon = new window.kakao.maps.LatLng(lat, lng);
-      map.panTo(moveLatLon);
-    }
-  }, [selectedLocation, map, type]);
 
   return (
     <div style={{
@@ -189,12 +202,15 @@ export const MapView = ({ items, selectedLocation, type, onLocationSelect, onMar
       height: isFormType ? '400px' : '600px',
       display: visible ? 'block' : 'none'
     }}>
-      <div id={mapId} style={{
-        width: '100%',
-        height: '100%',
-        position: 'absolute'
-      }} />
-      {!isFormType && selectedLocation && visible && (
+      <div
+        ref={mapContainerRef}
+        id={mapId}
+        style={{
+          width: '100%',
+          height: '100%',
+          position: 'absolute'
+        }}
+      />{!isFormType && selectedLocation && visible && (
         <Card style={{
           position: 'absolute',
           bottom: 0,
