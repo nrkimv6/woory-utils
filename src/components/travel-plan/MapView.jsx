@@ -5,22 +5,21 @@ import { VisitDetailView } from './VisitDetailView';
 import { useKakaoLoader } from '@/hooks/useKakaoLoader';
 import { PASTEL_COLORS } from '@/util/colors';
 
-
 export const MapView = ({ items, selectedLocation, type, onLocationSelect, onMarkerClick, visible = true }) => {
-  const [map, setMap] = useState(null);
+  const mapRef = useRef(null);
   const [marker, setMarker] = useState(null);
-  const [customOverlays, setCustomOverlays] = useState([]);
   const [clickListener, setClickListener] = useState(null);
   const isKakaoLoaded = useKakaoLoader();
   const mapId = `map-${type}`;
   const isFormType = type === 'events-form';
   const mapContainerRef = useRef(null);
-  const overlaysRef = useRef([]);  // 오버레이 참조 추가
+  const overlaysRef = useRef([]);
+  const initializedRef = useRef(false);
 
-  // 마커/오버레이 업데이트 - DOM 조작 최소화
-  const updateMarkersAndOverlays = useCallback((kakaoMap) => {
-    const targetMap = kakaoMap || map;
-    if (!targetMap || !items?.length) return;
+  // 마커/오버레이 업데이트 - 메모이제이션된 함수
+  const updateMarkersAndOverlays = useCallback(() => {
+    const kakaoMap = mapRef.current;
+    if (!kakaoMap || !items?.length) return;
 
     // 기존 오버레이 제거
     overlaysRef.current.forEach(overlay => overlay.setMap(null));
@@ -41,12 +40,11 @@ export const MapView = ({ items, selectedLocation, type, onLocationSelect, onMar
         if (isFormType) {
           const newMarker = new window.kakao.maps.Marker({
             position: position,
-            map: targetMap
+            map: kakaoMap
           });
           setMarker(newMarker);
-          targetMap.panTo(position);
+          kakaoMap.panTo(position);
         } else {
-          // DOM 엘리먼트 직접 생성
           const markerDiv = document.createElement('div');
           markerDiv.style.background = PASTEL_COLORS[index % PASTEL_COLORS.length];
           markerDiv.style.padding = '5px 10px';
@@ -77,7 +75,7 @@ export const MapView = ({ items, selectedLocation, type, onLocationSelect, onMar
           const overlay = new window.kakao.maps.CustomOverlay({
             position: position,
             content: markerDiv,
-            map: targetMap,
+            map: kakaoMap,
             yAnchor: 1.3
           });
 
@@ -87,26 +85,27 @@ export const MapView = ({ items, selectedLocation, type, onLocationSelect, onMar
     });
 
     if (!isFormType && overlaysRef.current.length > 0) {
-      targetMap.setBounds(bounds);
+      kakaoMap.setBounds(bounds);
     }
-  }, [type, isFormType, items, onMarkerClick]);
+  }, [type, isFormType, items, onMarkerClick, marker]);
 
-  // 지도 초기화
+  // 지도 초기화 - 한 번만 실행되도록 수정
   const initializeMap = useCallback(() => {
-    if (!isKakaoLoaded || !mapContainerRef.current) return;
+    if (!isKakaoLoaded || !mapContainerRef.current || initializedRef.current) return;
 
-    // 기존 리스너 제거
-    if (clickListener) {
-      window.kakao.maps.event.removeListener(clickListener);
-      setClickListener(null);
-    }
+    console.log(`${type} MapView - 초기화 시작`, new Date().toISOString());
 
     const options = {
       center: new window.kakao.maps.LatLng(37.5665, 126.9780),
       level: isFormType ? 3 : 7
     };
+    if(mapRef.current){
+      mapRef.current=null;
+    }
 
+  setTimeout(() => {
     const kakaoMap = new window.kakao.maps.Map(mapContainerRef.current, options);
+    mapRef.current = kakaoMap;
 
     if (isFormType && onLocationSelect) {
       const listener = window.kakao.maps.event.addListener(
@@ -127,36 +126,53 @@ export const MapView = ({ items, selectedLocation, type, onLocationSelect, onMar
       setClickListener(listener);
     }
 
-    setMap(kakaoMap);
-
-    // 맵 생성 직후 한 번만 실행
+    initializedRef.current = true;
     kakaoMap.relayout();
-    updateMarkersAndOverlays(kakaoMap);
-  }, [isKakaoLoaded, isFormType, onLocationSelect, updateMarkersAndOverlays]);
+    updateMarkersAndOverlays();
+
+    console.log(`${type} MapView - 초기화 끝`, new Date().toISOString());
+  }, 100); // 100ms 딜레이
+
+}, [isKakaoLoaded, isFormType, onLocationSelect, marker, updateMarkersAndOverlays]);
 
 
-  // visible 변경 시에만 초기화
+  // visible이 true가 될 때만 초기화
   useEffect(() => {
-    if (visible) {
+    if (visible && !initializedRef.current) {
       initializeMap();
     }
+    
     return () => {
-      if (clickListener) {
-        window.kakao.maps.event.removeListener(clickListener);
-        setClickListener(null);
+      if (!visible) {
+        // cleanup when hidden
+        if (clickListener) {
+          window.kakao.maps.event.removeListener(clickListener);
+          setClickListener(null);
+        }
+        if (marker) {
+          marker.setMap(null);
+        }
+        overlaysRef.current.forEach(overlay => overlay.setMap(null));
+        overlaysRef.current = [];
+        initializedRef.current = false;
+        mapRef.current = null;
       }
-      if (marker) marker.setMap(null);
-      overlaysRef.current.forEach(overlay => overlay.setMap(null));
-      overlaysRef.current = [];
     };
-  }, [visible, initializeMap]);
+  }, [visible, initializeMap, clickListener, marker]);
 
   // items 변경 시에만 마커 업데이트
   useEffect(() => {
-    if (map && items?.length) {
-      updateMarkersAndOverlays(map);
+    if (mapRef.current && items?.length) {
+      updateMarkersAndOverlays();
     }
   }, [items, updateMarkersAndOverlays]);
+
+  // visible 변경 시 relayout 호출
+  useEffect(() => {
+    if (visible && mapRef.current) {
+      mapRef.current.relayout();
+    }
+  }, [visible]);
 
   return (
     <div style={{ 

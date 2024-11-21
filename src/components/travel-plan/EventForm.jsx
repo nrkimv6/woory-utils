@@ -1,4 +1,3 @@
-
 "use client"
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
@@ -27,6 +26,7 @@ import { useKakaoLoader } from '@/hooks/useKakaoLoader';
 export default function EventForm({ onSubmit, initialData }) {
   const [opened, setOpened] = useState(false);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
+  const [mapKey, setMapKey] = useState(0); // 맵 컴포넌트 강제 리렌더링을 위한 키
   const [geocoder, setGeocoder] = useState(null);
   const isKakaoLoaded = useKakaoLoader();
 
@@ -58,7 +58,7 @@ export default function EventForm({ onSubmit, initialData }) {
   }, [isKakaoLoaded]);
 
   const handleAddressSearch = async (e) => {
-    e?.preventDefault(); // 폼 제출 방지
+    e?.preventDefault();
     if (!geocoder || !formData.address) return;
 
     setIsSearching(true);
@@ -66,17 +66,14 @@ export default function EventForm({ onSubmit, initialData }) {
       setIsSearching(false);
       if (status === window.kakao.maps.services.Status.OK) {
         if (result.length === 1) {
-          // 결과가 하나면 바로 적용
           applyAddressResult(result[0]);
         } else {
-          // 여러 결과가 있으면 목록 표시
           setAddressResults(result);
         }
       }
     });
   };
 
-  // 선택된 주소 결과 적용
   const applyAddressResult = (selected) => {
     setFormData(prev => ({
       ...prev,
@@ -86,7 +83,7 @@ export default function EventForm({ onSubmit, initialData }) {
       jibun_address: selected.address.address_name || '',
       address: selected.road_address?.address_name || selected.address.address_name
     }));
-    setAddressResults([]); // 검색 결과 목록 닫기
+    setAddressResults([]);
   };
 
   const handleLocationSelect = (latlng) => {
@@ -107,6 +104,7 @@ export default function EventForm({ onSubmit, initialData }) {
       }
     });
   };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -139,6 +137,16 @@ export default function EventForm({ onSubmit, initialData }) {
     }
   };
 
+  // 위치정보 펼치기/접기 핸들러
+  const handleLocationPickerToggle = () => {
+    setShowLocationPicker(!showLocationPicker);
+    if (!showLocationPicker) {
+      // 펼칠 때만 맵 키를 변경하여 재초기화
+      setMapKey(prev => prev + 1);
+      console.log('change map key ' + mapKey);
+    }
+  };
+
   return (
     <>
       <Button variant="outline" onClick={() => setOpened(true)}>
@@ -146,7 +154,10 @@ export default function EventForm({ onSubmit, initialData }) {
       </Button>
       <Modal
         opened={opened}
-        onClose={() => setOpened(false)}
+        onClose={() => {
+          setOpened(false);
+          setShowLocationPicker(false); // 모달이 닫힐 때 위치정보도 접기
+        }}
         title={`이벤트 ${initialData ? '수정' : '추가'}`}
         size="xl"
       >
@@ -232,7 +243,7 @@ export default function EventForm({ onSubmit, initialData }) {
                   <Button
                     variant="subtle"
                     size="sm"
-                    onClick={() => setShowLocationPicker(!showLocationPicker)}
+                    onClick={handleLocationPickerToggle}
                   >
                     {showLocationPicker ? '접기' : '펼치기'}
                   </Button>
@@ -247,7 +258,7 @@ export default function EventForm({ onSubmit, initialData }) {
                           value={formData.address || ''}
                           onChange={(e) => {
                             setFormData(prev => ({ ...prev, address: e.target.value }));
-                            setAddressResults([]); // 타이핑할 때 결과 목록 초기화
+                            setAddressResults([]);
                           }}
                         />
                         <Button type="submit" loading={isSearching}>검색</Button>
@@ -277,12 +288,16 @@ export default function EventForm({ onSubmit, initialData }) {
                     )}
 
                     <Box sx={{ height: 400 }}>
-                      <MapView
-                        items={[formData]}
-                        type="events-form"
-                        onLocationSelect={handleLocationSelect}
-                        visible={opened && showLocationPicker}
-                      />
+                      {/* MapView를 조건부 렌더링으로 변경 */}
+                      {opened && showLocationPicker && (
+                        <MapView
+                          key={mapKey} // 키 변경으로 컴포넌트 재생성
+                          items={[formData]}
+                          type="events-form"
+                          onLocationSelect={handleLocationSelect}
+                          visible={opened && showLocationPicker}
+                        />
+                      )}
                     </Box>
                     {formData.lat && formData.lng && (
                       <Text size="sm" color="dimmed" mt="xs">
@@ -292,7 +307,6 @@ export default function EventForm({ onSubmit, initialData }) {
                   </Paper>
                 </Collapse>
               </Grid.Col>
-
               <Grid.Col span={6}>
                 <Checkbox
                   label="예약 필요"
