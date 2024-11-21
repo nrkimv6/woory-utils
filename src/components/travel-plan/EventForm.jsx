@@ -122,18 +122,8 @@ export default function EventForm({ onSubmit, initialData, onClose }) {
 
     try {
       await onSubmit(cleanedData);
-      notifications.show({
-        title: "성공",
-        message: "이벤트가 등록되었습니다.",
-        color: "green"
-      });
       setOpened(false);
     } catch (error) {
-      notifications.show({
-        title: "오류",
-        message: "이벤트 등록에 실패했습니다.",
-        color: "red"
-      });
     }
   };
 

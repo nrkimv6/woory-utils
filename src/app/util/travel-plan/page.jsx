@@ -1,8 +1,6 @@
 "use client"
 import React, { useEffect, useState } from 'react';
 import { Card, Select, Stack, Group, Tabs, Text, Badge, Button } from '@mantine/core';
-import { DateInput } from '@mantine/dates';
-import { format } from 'date-fns';
 import { eventApi, visitApi } from '@/lib/travel-plan/api';
 import { useKakaoLoader } from '@/hooks/useKakaoLoader';
 
@@ -12,7 +10,7 @@ import { Filters } from '@/components/travel-plan/Filters';
 import { LocationList } from '@/components/travel-plan/LocationList';
 import { MapView } from '@/components/travel-plan/MapView';
 import { useLocationFilter } from '@/hooks/travel-plan/useLocationFilter';
-import { notifications } from '@mantine/notifications';
+import { showSuccess, showError } from '@/util/notification';
 
 // KakaoMapList.jsx
 const KakaoMapList = () => {
@@ -60,12 +58,15 @@ const KakaoMapList = () => {
       if (type === 'event') {
         await eventApi.deleteEvent(id);
         fetchEvents();
+        showSuccess("이벤트가 삭제되었습니다.");
       } else {
         await visitApi.deleteVisit(id);
         fetchVisits();
+        showSuccess("방문 계획이 삭제되었습니다.");
       }
     } catch (error) {
       console.error(`Error deleting ${type}:`, error);
+      showError(`${type === 'event' ? '이벤트' : '방문 계획'} 삭제에 실패했습니다.`);
     }
   };
 
@@ -91,49 +92,40 @@ const KakaoMapList = () => {
       if (editingEvent) {
         // 수정일 경우
         await eventApi.updateEvent(editingEvent.id, eventData);
-        notifications.show({
-          title: "성공",
-          message: "이벤트가 수정되었습니다.",
-          color: "green"
-        });
+        showSuccess("이벤트가 수정되었습니다.");
       } else {
         // 추가일 경우
         await eventApi.addEvent(eventData);
-        notifications.show({
-          title: "성공",
-          message: "이벤트가 추가되었습니다.",
-          color: "green"
-        });
+        showSuccess("이벤트가 추가되었습니다.");
       }
       fetchEvents();
       setEditingEvent(null);
     } catch (error) {
       console.error('Error managing event:', error);
-      notifications.show({
-        title: "오류",
-        message: `이벤트 ${editingEvent ? '수정' : '추가'}에 실패했습니다.`,
-        color: "red"
-      });
+      showError(`이벤트 ${editingEvent ? '수정' : '추가'}에 실패했습니다.`);
     }
   };
 
-const handleVisitSubmit = async (visitData) => {
-  try {
-    if (editingVisit) {
-      await visitApi.updateVisit(editingVisit.id, visitData);
-    } else {
-      await visitApi.addVisit(visitData);
+  const handleVisitSubmit = async (visitData) => {
+    try {
+      if (editingVisit) {
+        await visitApi.updateVisit(editingVisit.id, visitData);
+        showSuccess("방문 계획이 수정되었습니다.");
+      } else {
+        await visitApi.addVisit(visitData);
+        showSuccess("방문 계획이 추가되었습니다.");
+      }
+      fetchVisits();
+      setEditingVisit(null);
+    } catch (error) {
+      console.error('Error managing visit:', error);
+      showError("방문 계획 추가에 실패했습니다.");
     }
-    fetchVisits();
-    setEditingVisit(null);
-  } catch (error) {
-    console.error('Error managing visit:', error);
-  }
-};
+  };
 
-const handleVisitFormClose = () => {
-  setEditingVisit(null);
-};
+  const handleVisitFormClose = () => {
+    setEditingVisit(null);
+  };
   useEffect(() => {
     fetchEvents();
     fetchVisits();
@@ -152,7 +144,7 @@ const handleVisitFormClose = () => {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+    <main style={{ minHeight: '100vh' }}>
       <Group position="right" p="md">
         <EventForm
           onSubmit={handleEventSubmit}
@@ -202,7 +194,7 @@ const handleVisitFormClose = () => {
           </Tabs.Panel>
         ))}
       </Tabs>
-    </div>
+    </main>
   );
 };
 

@@ -1,6 +1,8 @@
 import React from 'react';
 import '@/styles/LocationMarker.css'  // 상단에 추가
+
 const LocationMarker = ({ index, isEvent, color, onClick }) => {
+
  const markerText = isEvent ? String.fromCharCode(65 + index) : (index + 1).toString();
  
  const darkenColor = (color, amount = 0.2) => {
@@ -12,9 +14,9 @@ const LocationMarker = ({ index, isEvent, color, onClick }) => {
    const darkerG = Math.floor(g * (1 - amount));
    const darkerB = Math.floor(b * (1 - amount));
    return `#${darkerR.toString(16).padStart(2, '0')}${darkerG.toString(16).padStart(2, '0')}${darkerB.toString(16).padStart(2, '0')}`;
- };
-
+ }; 
  const markerPath = "M17 50L2 17.5C2 8.4 8.4 2 17 2s15 6.4 15 15.5L17 50z";
+ const [isHovered, setIsHovered] = React.useState(false);
 
  return (
    <div 
@@ -24,17 +26,40 @@ const LocationMarker = ({ index, isEvent, color, onClick }) => {
        height: '50px',
        position: 'relative',
        cursor: 'pointer',
-       transition: 'transform 0.2s',
-       filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))',
+       transition: 'all 0.3s',
+       filter: isHovered ? 
+         'drop-shadow(0 0 8px rgba(255, 255, 0, 0.5)) drop-shadow(0 2px 4px rgba(0,0,0,0.2))' : 
+         'drop-shadow(0 2px 4px rgba(0,0,0,0.2))',
+       transform: isHovered ? 'scale(1.1) translateY(-2px)' : 'scale(1) translateY(0)',
      }}
-     onMouseEnter={e => {
-       e.currentTarget.style.transform = 'scale(1.1) translateY(-2px)';
-     }}
-     onMouseLeave={e => {
-       e.currentTarget.style.transform = 'scale(1) translateY(0)';
-     }}
+     onMouseEnter={() => setIsHovered(true)}
+     onMouseLeave={() => setIsHovered(false)}
    >
-     {/* Border layer */}
+     {/* Animated border trace */}
+     {isHovered && (
+       <div
+         style={{
+           position: 'absolute',
+           width: '100%',
+           height: '100%',
+           clipPath: `path("${markerPath}")`,
+           transform: 'scale(1.06)',
+         }}
+       >
+         <div
+           style={{
+             position: 'absolute',
+             width: '100%',
+             height: '100%',
+             background: 'linear-gradient(90deg, transparent 0%, yellow 50%, transparent 100%)',
+             animation: 'borderTrace 1.5s linear infinite',
+             opacity: 0.6,
+           }}
+         />
+       </div>
+     )}
+     
+     {/* Rest of the marker components */}
      <div
        style={{
          position: 'absolute',
@@ -46,7 +71,6 @@ const LocationMarker = ({ index, isEvent, color, onClick }) => {
        }}
      />
      
-     {/* Main marker */}
      <div
        style={{
          position: 'absolute',
@@ -94,6 +118,13 @@ const LocationMarker = ({ index, isEvent, color, onClick }) => {
        />
      </div>
 
+     <style jsx>{`
+       @keyframes borderTrace {
+         0% { transform: translateX(-100%); }
+         100% { transform: translateX(100%); }
+       }
+     `}</style>
+     
      <link
        href="https://fonts.googleapis.com/css2?family=Inter:wght@600&display=swap"
        rel="stylesheet"
@@ -101,5 +132,4 @@ const LocationMarker = ({ index, isEvent, color, onClick }) => {
    </div>
  );
 };
-
 export default LocationMarker;
