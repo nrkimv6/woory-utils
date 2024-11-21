@@ -1,17 +1,20 @@
-import { useEffect,useState } from 'react';
-import { Card, Select, Stack, Group, Tabs, Text, Badge, Button } from '@mantine/core';
-import { EventDetailView} from './EventDetailView';
-import { VisitDetailView} from './VisitDetailView';
+import { useEffect, useState } from 'react';
+import { Card } from '@mantine/core';
+import { EventDetailView } from './EventDetailView';
+import { VisitDetailView } from './VisitDetailView';
 import { useKakaoLoader } from '@/hooks/useKakaoLoader';
-import {PASTEL_COLORS} from '@/util/colors'
+import { PASTEL_COLORS } from '@/util/colors';
 
-export const MapView = ({ items, selectedLocation, type, onLocationSelect }) => {
+
+export const MapView = ({ items, selectedLocation, type, onLocationSelect, onMarkerClick }) => {
   const [map, setMap] = useState(null);
   const [marker, setMarker] = useState(null);
   const [customOverlays, setCustomOverlays] = useState([]);
   const isKakaoLoaded = useKakaoLoader();
   const mapId = `map-${type}`;
+  const isFormType = type === 'events-form';
 
+  // 맵 초기화
   useEffect(() => {
     if (!isKakaoLoaded) return;
 
@@ -19,43 +22,27 @@ export const MapView = ({ items, selectedLocation, type, onLocationSelect }) => 
     if (!container) return;
 
     const options = {
-      center: new kakao.maps.LatLng(37.5665, 126.9780),
-      level: 3
+      center: new window.kakao.maps.LatLng(37.5665, 126.9780),
+      level: isFormType ? 3 : 7
     };
 
     const kakaoMap = new window.kakao.maps.Map(container, options);
     setMap(kakaoMap);
 
-    if (type === 'form') {
+    // form 타입일 경우 클릭 이벤트 리스너 추가
+    if (isFormType && onLocationSelect) {
       const clickListener = window.kakao.maps.event.addListener(
         kakaoMap,
         'click',
         (mouseEvent) => {
           const latlng = mouseEvent.latLng;
-          
-          // 기존 마커 제거
-          if (marker) {
-            marker.setMap(null);
-          }
-
-          // 새 마커 생성 
-          // 기본 마커 이미지 외에도 RED, BLUE, YELLOW, GREEN 등의 마커 이미지 사용 가능
-          const newMarker = new kakao.maps.Marker({
-            position: latlng,
-            image: kakao.maps.MarkerImage.RED // 또는 다른 기본 제공 이미지
-          });
-          
-          newMarker.setMap(kakaoMap);
-          setMarker(newMarker);
-          
-          if (onLocationSelect) {
-            onLocationSelect(latlng);
-          }
+          updateFormMarker(latlng);
+          onLocationSelect(latlng);
         }
       );
 
       return () => {
-        window.kakao.maps.event.removeListener(clickListener);
+        window.kakao.maps.event?.removeListener(clickListener);
         if (marker) {
           marker.setMap(null);
         }
@@ -63,50 +50,137 @@ export const MapView = ({ items, selectedLocation, type, onLocationSelect }) => 
     }
   }, [mapId, type, isKakaoLoaded]);
 
+  // form 타입일 때 마커 업데이트 함수
+  const updateFormMarker = (position) => {
+    if (marker) {
+      marker.setMap(null);
+    }
 
-  // 목록 표시용 마커 업데이트 (form type이 아닐 때만)
+    const newMarker = new window.kakao.maps.Marker({
+      position: position,
+      map: map
+    });
+
+    setMarker(newMarker);
+  };
+
+  // form 타입일 때 items 변경 시 마커 업데이트 및 위치 이동
   useEffect(() => {
-    if (!map || type === 'form' || !items?.length) return;
+    if (!map || !isFormType || !items?.length) return;
 
+    const item = items[0]; // form type은 항상 하나의 아이템만 받음
+    if (item.lat && item.lng) {
+      const position = new window.kakao.maps.LatLng(item.lat, item.lng);
+      updateFormMarker(position);
+      map.setCenter(position);
+    }
+  }, [map, items, isFormType]);
+
+  // ... 나머지 MapView 코드는 동일
+
+  
+  // 마커/오버레이 업데이트 (일반 목록 표시용)
+  useEffect(() => {
+    if (!map || isFormType || !items?.length) return;
+
+    // 기존 오버레이 제거
     customOverlays.forEach(overlay => overlay.setMap(null));
     const newOverlays = [];
-    const bounds = new kakao.maps.LatLngBounds();
+    const bounds = new window.kakao.maps.LatLngBounds();
 
-    items.forEach((location, index) => {
-      const lat = type === "events" ? location.lat : location.tp_events?.lat;
-      const lng = type === "events" ? location.lng : location.tp_events?.lng;
+    items.forEach((item, index) => {
+      const lat = type === "events" ? item.lat : item.tp_events?.lat;
+      const lng = type === "events" ? item.lng : item.tp_events?.lng;
 
       if (lat && lng) {
-        const position = new kakao.maps.LatLng(lat, lng);
+        const position = new window.kakao.maps.LatLng(lat, lng);
         bounds.extend(position);
 
-        const customOverlay = new kakao.maps.CustomOverlay({
+        const markerText = type === "events"
+          ? String.fromCharCode(65 + index)
+          : (index + 1).toString();
+
+        const markerContent = `
+          <div style="
+            background: ${PASTEL_COLORS[index % PASTEL_COLORS.length]};
+            padding: 5px 10px;
+            border-radius: ${type === "events" ? '4px' : '50%'};
+            color: #333;
+            font-weight: bold;
+            text-align: center;
+            min-width: 24px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: relative;
+            cursor: pointer;
+          ">
+            ${markerText}
+            <div style="
+              position: absolute;
+              bottom: -8px;
+              left: 50%;
+              transform: translateX(-50%);
+              width: 0;
+              height: 0;
+              border-left: 8px solid transparent;
+              border-right: 8px solid transparent;
+              border-top: 8px solid ${PASTEL_COLORS[index % PASTEL_COLORS.length]};
+            "></div>
+          </div>
+        `;
+
+        const overlay = new window.kakao.maps.CustomOverlay({
           position: position,
           content: markerContent,
           map: map,
           yAnchor: 1.3
         });
 
-        newOverlays.push(customOverlay);
+        // 클릭 이벤트 추가
+        const element = overlay.getContent();
+        if (typeof element === 'string') {
+          const div = document.createElement('div');
+          div.innerHTML = element;
+          div.firstChild.addEventListener('click', () => {
+            onMarkerClick?.(item);
+          });
+          overlay.setContent(div.firstChild);
+        }
+
+        newOverlays.push(overlay);
       }
     });
 
     setCustomOverlays(newOverlays);
-    map.setBounds(bounds);
+    if (newOverlays.length > 0) {
+      map.setBounds(bounds);
+    }
   }, [map, items, type]);
+
+  // 선택된 위치로 이동 (form이 아닐 때만)
+  useEffect(() => {
+    if (!map || !selectedLocation || isFormType) return;
+    
+    const lat = type === "events" ? selectedLocation.lat : selectedLocation.tp_events?.lat;
+    const lng = type === "events" ? selectedLocation.lng : selectedLocation.tp_events?.lng;
+    
+    if (lat && lng) {
+      const moveLatLon = new window.kakao.maps.LatLng(lat, lng);
+      map.panTo(moveLatLon);
+    }
+  }, [selectedLocation, map, type]);
 
   return (
     <div style={{ 
-      width: type === 'form' ? '100%' : '66.666%', 
+      width: isFormType ? '100%' : '66.666%', 
       position: 'relative', 
-      height: type === 'form' ? '400px' : '600px' 
+      height: isFormType ? '400px' : '600px' 
     }}>
       <div id={mapId} style={{ 
         width: '100%', 
         height: '100%', 
         position: 'absolute' 
       }} />
-      {type !== 'form' && selectedLocation && (
+      {!isFormType && selectedLocation && (
         <Card style={{
           position: 'absolute',
           bottom: 0,
