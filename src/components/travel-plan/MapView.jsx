@@ -1,10 +1,11 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
+import ReactDOM from 'react-dom';
 import { Card } from '@mantine/core';
 import { EventDetailView } from './EventDetailView';
 import { VisitDetailView } from './VisitDetailView';
 import { useKakaoLoader } from '@/hooks/useKakaoLoader';
 import { PASTEL_COLORS } from '@/util/colors';
-
+import LocationMarker from './LocationMarker';
 export const MapView = ({ items, selectedLocation, type, onLocationSelect, onMarkerClick, visible = true }) => {
   const mapRef = useRef(null);
   const [marker, setMarker] = useState(null);
@@ -20,7 +21,6 @@ export const MapView = ({ items, selectedLocation, type, onLocationSelect, onMar
     const kakaoMap = mapRef.current;
     if (!kakaoMap || !items?.length) return;
 
-    // 기존 오버레이 제거
     overlaysRef.current.forEach(overlay => overlay.setMap(null));
     overlaysRef.current = [];
 
@@ -28,7 +28,6 @@ export const MapView = ({ items, selectedLocation, type, onLocationSelect, onMar
 
     let minLat = 90, maxLat = -90, minLng = 180, maxLng = -180;
     items.forEach((item, index) => {
-
       const lat = Number(item.lat || item.tp_events?.lat);
       const lng = Number(item.lng || item.tp_events?.lng);
 
@@ -41,45 +40,27 @@ export const MapView = ({ items, selectedLocation, type, onLocationSelect, onMar
         bounds.extend(position);
 
         if (isFormType) {
-          // Form 타입일 때는 일반 마커 사용
           const marker = new window.kakao.maps.Marker({
             position: position,
             map: kakaoMap
           });
-          overlaysRef.current.push(marker);  // marker도 overlay ref에서 관리
+          overlaysRef.current.push(marker);
         } else {
-          // 일반 리스트용 커스텀 오버레이
-          const markerDiv = document.createElement('div');
-          markerDiv.style.background = PASTEL_COLORS[index % PASTEL_COLORS.length];
-          markerDiv.style.padding = '5px 10px';
+          const MarkerComponent = () => (
+            <LocationMarker
+              index={index}
+              isEvent={type === "events"}
+              color={PASTEL_COLORS[index % PASTEL_COLORS.length]}
+              onClick={() => onMarkerClick?.(item)}
+            />
+          );
 
-          markerDiv.style.borderRadius = type === "events" ? '4px' : '50%';
-          markerDiv.style.color = '#333';
-          markerDiv.style.fontWeight = 'bold';
-          markerDiv.style.textAlign = 'center';
-          markerDiv.style.minWidth = '24px';
-          markerDiv.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-          markerDiv.style.position = 'relative';
-          markerDiv.style.cursor = 'pointer';
-          markerDiv.innerHTML = type === "events" ? String.fromCharCode(65 + index) : (index + 1).toString();
-
-          const arrow = document.createElement('div');
-          arrow.style.position = 'absolute';
-          arrow.style.bottom = '-8px';
-          arrow.style.left = '50%';
-          arrow.style.transform = 'translateX(-50%)';
-          arrow.style.width = '0';
-          arrow.style.height = '0';
-          arrow.style.borderLeft = '8px solid transparent';
-          arrow.style.borderRight = '8px solid transparent';
-          arrow.style.borderTop = `8px solid ${PASTEL_COLORS[index % PASTEL_COLORS.length]}`;
-
-          markerDiv.appendChild(arrow);
-          markerDiv.addEventListener('click', () => onMarkerClick?.(item));
+          const container = document.createElement('div');
+          ReactDOM.render(<MarkerComponent />, container);
 
           const overlay = new window.kakao.maps.CustomOverlay({
             position: position,
-            content: markerDiv,
+            content: container,
             map: kakaoMap,
             yAnchor: 1.3
           });
@@ -90,10 +71,7 @@ export const MapView = ({ items, selectedLocation, type, onLocationSelect, onMar
     });
 
     if (!isFormType && overlaysRef.current.length > 0) {
-      // const padding = getPaddingByLevel(kakaoMap.getLevel());
       const padding = 0;
-      console.log('level + ' + kakaoMap.getLevel() + ', padding ' + padding)
-
       const virtualBounds = new window.kakao.maps.LatLngBounds(
         new window.kakao.maps.LatLng(minLat - padding, minLng - padding),
         new window.kakao.maps.LatLng(maxLat + padding, maxLng + padding)
@@ -164,7 +142,6 @@ export const MapView = ({ items, selectedLocation, type, onLocationSelect, onMar
   }, [isKakaoLoaded, isFormType, onLocationSelect, marker, updateMarkersAndOverlays]);
 
 
-  // visible이 true가 될 때만 초기화
   useEffect(() => {
     if (visible && !initializedRef.current) {
       initializeMap();
@@ -180,7 +157,14 @@ export const MapView = ({ items, selectedLocation, type, onLocationSelect, onMar
         if (marker) {
           marker.setMap(null);
         }
-        overlaysRef.current.forEach(overlay => overlay.setMap(null));
+        // React 컴포넌트 cleanup
+        overlaysRef.current.forEach(overlay => {
+          const content = overlay.getContent();
+          if (content) {
+            ReactDOM.unmountComponentAtNode(content);
+          }
+          overlay.setMap(null);
+        });
         overlaysRef.current = [];
         initializedRef.current = false;
         mapRef.current = null;
