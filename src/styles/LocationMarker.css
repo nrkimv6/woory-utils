@@ -1,0 +1,5 @@
+/* styles/LocationMarker.css 파일 생성 */
+.marker-container:hover .marker-pin {
+  transform: scale(1.1) translateY(-2px);
+  filter: brightness(1.05);
+}
