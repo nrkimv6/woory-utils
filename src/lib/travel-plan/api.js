@@ -50,7 +50,7 @@ export const eventApi = {
 // 방문 계획 관련 함수들
 export const visitApi = {
   // 방문 계획 목록 조회
-  async getVisits(eventId = null) {
+  async getVisits_old(eventId = null) {
     let query = supabase.from('tp_visits').select('*')
     if (eventId) {
       query = query.eq('event_id', eventId)
@@ -61,6 +61,39 @@ export const visitApi = {
     return data
   },
 
+  async getVisits(eventId = null) {
+    let query = supabase
+      .from('tp_visits')
+      .select(`
+        *,
+        tp_events (
+          id,
+          name,
+          description,
+          start_date,
+          end_date,
+          open_time,
+          close_time,
+          address,
+          lat,
+          lng,
+          need_reservation,
+          category,
+          district,
+          url,
+          content
+        )
+      `)
+      .order('visit_order');
+
+    if (eventId) {
+      query = query.eq('event_id', eventId);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data;
+  },
   // 방문 계획 추가
   async addVisit(visitData) {
     const { data, error } = await supabase

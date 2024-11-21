@@ -1,18 +1,22 @@
-const LocationMarker = ({ index, isEvent = true, color }) => {
+
+const LocationMarker = ({ index, isEvent, color, onClick }) => {
   const markerText = isEvent ? String.fromCharCode(65 + index) : (index + 1).toString();
-  
   return (
-    <div style={{
-      background: color,
-      padding: '5px 10px',
-      borderRadius: isEvent ? '4px' : '50%',
-      color: '#333',
-      fontWeight: 'bold',
-      textAlign: 'center',
-      minWidth: '24px',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-      position: 'relative',
-    }}>
+    <div
+      onClick={onClick}
+      style={{
+        background: color,
+        padding: '5px 10px',
+        borderRadius: isEvent ? '4px' : '50%',
+        color: '#333',
+        fontWeight: 'bold',
+        textAlign: 'center',
+        minWidth: '24px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        position: 'relative',
+        cursor: onClick ? 'pointer' : 'default'
+      }}
+    >
       {markerText}
       <div style={{
         position: 'absolute',
@@ -23,7 +27,7 @@ const LocationMarker = ({ index, isEvent = true, color }) => {
         height: 0,
         borderLeft: '8px solid transparent',
         borderRight: '8px solid transparent',
-        borderTop: `8px solid ${color}`,
+        borderTop: `8px solid ${color}`
       }} />
     </div>
   );
