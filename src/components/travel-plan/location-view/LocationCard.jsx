@@ -1,6 +1,6 @@
 import { Card, Select, Stack, Group, Tabs, Text, Badge, Button } from '@mantine/core';
-import { EventCardContent} from './EventCardContent';
-import { VisitCardContent} from './VisitCardContent';
+import { EventCardContent} from '../EventCardContent';
+import { VisitCardContent} from '../VisitCardContent';
 import LocationMarker from '@/components/travel-plan/LocationMarker';
 import { EventActions } from '@/components/travel-plan/EventActions'
 

@@ -7,7 +7,7 @@ import { useKakaoLoader } from '@/hooks/useKakaoLoader';
 import EventForm from '@/components/travel-plan/EventForm';
 import VisitForm from '@/components/travel-plan/VisitForm';
 import { Filters } from '@/components/travel-plan/Filters';
-import { LocationList } from '@/components/travel-plan/LocationList';
+import { LocationView } from '@/components/travel-plan/LocationView';
 import { MapView } from '@/components/travel-plan/MapView';
 import { useLocationFilter } from '@/hooks/travel-plan/useLocationFilter';
 import { showSuccess, showError } from '@/util/notification';
@@ -16,6 +16,7 @@ import { showSuccess, showError } from '@/util/notification';
 const KakaoMapList = () => {
   const [activeTab, setActiveTab] = useState("events");
 
+  const [viewMode, setViewMode] = useState('card'); // 'card' | 'timeline'
   const isKakaoLoaded = useKakaoLoader();
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [events, setEvents] = useState([]);
@@ -46,6 +47,7 @@ const KakaoMapList = () => {
     setSelectedVisit(null);
     setSelectedLocation(null);
 
+    setViewMode(value === 'visits' ? 'timeline' : 'card');
     if (value === "events") {
       fetchEvents();
     } else {
@@ -174,7 +176,8 @@ const KakaoMapList = () => {
               onFilterChange={handleFilterChange}
             />
             <div style={{ display: 'flex', flex: 1 }}>
-              <LocationList
+            { activeTab == tabValue ? 
+              <LocationView
                 items={filteredItems}
                 activeTab={tabValue}
                 selectedItem={tabValue === "events" ? selectedEvent : selectedVisit}
@@ -182,7 +185,8 @@ const KakaoMapList = () => {
                 onItemEdit={tabValue === "events" ? setEditingEvent : setEditingVisit}
                 onItemDelete={(id) => handleDelete(id, tabValue)}
                 type={tabValue}
-              />
+                date={filters.date}
+              />:<></>}
               <MapView
                 items={filteredItems}
                 selectedLocation={selectedLocation}

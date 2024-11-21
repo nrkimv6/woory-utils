@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { format } from 'date-fns';
+import { format, parseISO, setHours, setMinutes } from 'date-fns';
 
 export const filterByDate = (items, date, activeTab) => {
   const dateStr = format(date, 'yyyy-MM-dd');
@@ -8,7 +8,7 @@ export const filterByDate = (items, date, activeTab) => {
       return item.start_date <= dateStr && dateStr <= item.end_date;
     } else {
       const visitDate = item.visit_time ? 
-        format(new Date(item.visit_time), 'yyyy-MM-dd') : 
+        format(parseISO(item.visit_time), 'yyyy-MM-dd') : 
         null;
       return visitDate === dateStr;
     }
@@ -29,22 +29,30 @@ const filterEventItems = (items, filters) => {
   return filtered;
 };
 
+const sortVisitsByTime = (visits) => {
+  return [...visits].sort((a, b) => {
+    const timeA = new Date(a.visit_time).getTime();
+    const timeB = new Date(b.visit_time).getTime();
+    return timeA - timeB;
+  });
+};
+
 const applyFilters = (items, filters, activeTab) => {
   if (!items) return [];
   
   let filtered = [...items];
-  console.log('Initial items:', filtered); // 디버깅용
   
   // 날짜 필터링
   if (filters.date) {
     filtered = filterByDate(filtered, filters.date, activeTab);
-    console.log('After date filter:', filtered); // 디버깅용
   }
   
   // 이벤트 전용 필터는 events 탭에서만 적용
   if (activeTab === "events") {
     filtered = filterEventItems(filtered, filters);
-    console.log('After event filters:', filtered); // 디버깅용
+  } else {
+    // 방문 계획은 시간순으로 정렬
+    filtered = sortVisitsByTime(filtered);
   }
   
   return filtered;
@@ -59,7 +67,6 @@ export const useLocationFilter = (activeTab, events, visits) => {
 
   const filteredItems = useMemo(() => {
     const items = activeTab === "events" ? events : visits;
-    console.log('Processing items for tab:', activeTab, items); // 디버깅용
     return applyFilters(items, filters, activeTab);
   }, [activeTab, events, visits, filters]);
 

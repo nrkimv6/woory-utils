@@ -5,7 +5,7 @@ import {PASTEL_COLORS} from '@/util/colors'
 
 export const LocationList = ({ items, activeTab, selectedItem, onItemClick, onItemEdit, onItemDelete, type }) => {
   return (
-    <div style={{ width: '33.333%', padding: '1rem', overflowY: 'auto' }}>
+    <div style={{ padding: '1rem', overflowY: 'auto' }}>
       <Stack spacing="md">
         {items.map((item, index) => (
           <LocationCard
