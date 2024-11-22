@@ -27,10 +27,8 @@ export const LocationView = ({
     // console.log('timelineItems'+filteredItems);
     return filteredItems;
   };
-
-
 // console.log('showOnlyUnscheduled '+showOnlyUnscheduled);
-console.log('type '+type+', activeTab '+activeTab);
+// console.log('type '+type+', activeTab '+activeTab);
   return (
     <div style={{ width: '50%', borderRight: '1px solid #eee' }}>
       <Group position="apart" p="md">
@@ -53,7 +51,6 @@ console.log('type '+type+', activeTab '+activeTab);
         />
       ) : (
         <>
-
           <TimelineView
             visits={getTimelineItems()}
             date={date}

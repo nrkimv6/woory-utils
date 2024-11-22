@@ -51,30 +51,37 @@ const KakaoMapList = () => {
 //   });
 // };
 
-
-  const getLocationInfo = (item, type) => {
-    if (type === 'events') {
-      return {
-        id: item.id,
-        event_id: item.id,
-        lat: item.lat,
-        lng: item.lng,
-        pin_idx: item.pin_idx,
-        markerText: item.markerText,
-        ...item
-      };
-    } else {
-      return {
-        id: item.id,
-        event_id: item.tp_events?.id,
-        lat: item.tp_events?.lat,
-        lng: item.tp_events?.lng,
-        pin_idx: item.pin_idx,
-        markerText: item.markerText,
-        ...item
-      };
-    }
-  };
+const getLocationInfo = (item, type) => {
+  if (type === 'events') {
+    const obj = {
+      id: item.id,
+      event_id: item.id,
+      lat: item.lat,
+      lng: item.lng,
+      pin_idx: item.pin_idx,
+      markerText: item.markerText,
+      isValid: () => {
+        return obj.id && obj.lat && obj.lng
+      },
+      ...item
+    };
+    return obj;
+  } else {
+    const obj = {
+      id: item.id,
+      event_id: item.tp_events?.id,
+      lat: item.tp_events?.lat,
+      lng: item.tp_events?.lng,
+      pin_idx: item.pin_idx,
+      markerText: item.markerText,
+      isValid: () => {
+        return obj.event_id && obj.lat && obj.lng
+      },
+      ...item
+    };
+    return obj;
+  }
+};
 
   // const handleEventClick = (event) => {
   //   setSelectedLocation(getLocationInfo(event, 'events'));
