@@ -1,5 +1,7 @@
+// hooks/useLocationFilter.js
 import { useState, useMemo } from 'react';
-import { format, parseISO, setHours, setMinutes } from 'date-fns';
+import { format, parseISO } from 'date-fns';
+
 const generateMarkerText = (index, type) => {
   return type === 'events' 
     ? String.fromCharCode(65 + index) 
@@ -46,24 +48,23 @@ const applyFilters = (items, filters, activeTab) => {
   
   let filtered = [...items];
   
-  // 날짜 필터링
   if (filters.date) {
     filtered = filterByDate(filtered, filters.date, activeTab);
   }
   
-  // 이벤트 전용 필터는 events 탭에서만 적용
   if (activeTab === "events") {
     filtered = filterEventItems(filtered, filters);
   } else {
-    // 방문 계획은 시간순으로 정렬
     filtered = sortVisitsByTime(filtered);
   }
   
-  // 필터링된 결과에 pin_idx 할당
+  // 필터링된 결과에 pin_idx와 markerText 할당
   return filtered.map((item, index) => ({
     ...item,
     pin_idx: index,
-    markerText: generateMarkerText(index, activeTab)
+    markerText: generateMarkerText(index, activeTab),
+    lat: item.lat?item.lat:item.tp_events?.lat,
+    lng: item.lng?item.lng:item.tp_events?.lng
   }));
 };
 

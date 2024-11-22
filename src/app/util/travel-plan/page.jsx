@@ -23,37 +23,90 @@ const KakaoMapList = () => {
   const [visits, setVisits] = useState([]);
   const [editingEvent, setEditingEvent] = useState(null);
   const [editingVisit, setEditingVisit] = useState(null);
-  const [selectedEvent, setSelectedEvent] = useState(null);
-  const [selectedVisit, setSelectedVisit] = useState(null);
+  // const [selectedEvent, setSelectedEvent] = useState(null);
+  // const [selectedVisit, setSelectedVisit] = useState(null);
   const { filters, setFilters, filteredItems } = useLocationFilter(activeTab, events, visits);
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
   
-const handleEventClick = (event) => {
-  setSelectedEvent(event);
-  setSelectedLocation({
-    id: event.id,
-    lat: event.lat,
-    lng: event.lng,
-    pin_idx: event.pin_idx
-  });
-};
+// const handleEventClick = (event) => {
+//   setSelectedEvent(event);
+//   setSelectedLocation({
+//     id: event.id,
+//     lat: event.lat,
+//     lng: event.lng,
+//     pin_idx: event.pin_idx
+//   });
+// };
 
-const handleVisitClick = (visit) => {
-  setSelectedVisit(visit);
-  setSelectedLocation({
-    id: visit.id,
-    lat: visit.tp_events?.lat,
-    lng: visit.tp_events?.lng,
-    pin_idx: visit.pin_idx
-  });
-};
+// const handleVisitClick = (visit) => {
+//   setSelectedVisit(visit);
+//   setSelectedLocation({
+//     id: visit.id,
+//     lat: visit.tp_events?.lat,
+//     lng: visit.tp_events?.lng,
+//     pin_idx: visit.pin_idx
+//   });
+// };
+
+
+  const getLocationInfo = (item, type) => {
+    if (type === 'events') {
+      return {
+        id: item.id,
+        event_id: item.id,
+        lat: item.lat,
+        lng: item.lng,
+        pin_idx: item.pin_idx,
+        markerText: item.markerText,
+        ...item
+      };
+    } else {
+      return {
+        id: item.id,
+        event_id: item.tp_events?.id,
+        lat: item.tp_events?.lat,
+        lng: item.tp_events?.lng,
+        pin_idx: item.pin_idx,
+        markerText: item.markerText,
+        ...item
+      };
+    }
+  };
+
+  // const handleEventClick = (event) => {
+  //   setSelectedLocation(getLocationInfo(event, 'events'));
+  // };
+
+  // const handleVisitClick = (visit) => {
+  //   setSelectedLocation(getLocationInfo(visit, 'visits'));
+  // };
+
+
+  const handleEventClick = (event) => {
+    console.log('handleEventClick received:', event); // 디버깅 로그
+    if (!event) {
+      console.warn('Event object is undefined');
+      return;
+    }
+    setSelectedLocation(getLocationInfo(event, 'events'));
+  };
+
+  const handleVisitClick = (visit) => {
+    console.log('handleVisitClick received:', visit); // 디버깅 로그
+    if (!visit) {
+      console.warn('Visit object is undefined');
+      return;
+    }
+    setSelectedLocation(getLocationInfo(visit, 'visits'));
+  };
+
   const handleTabChange = (value) => {
     setActiveTab(value);
-    setSelectedEvent(null);
-    setSelectedVisit(null);
+    // setSelectedEvent(null);
+    // setSelectedVisit(null);
     setSelectedLocation(null);
 
     setViewMode(value === 'visits' ? 'timeline' : 'card');
@@ -84,13 +137,7 @@ const handleVisitClick = (visit) => {
 const fetchEvents = async () => {
   try {
     const data = await eventApi.getEvents();
-    // 각 이벤트 객체에 pin_idx 추가
-    const eventsWithPinKey = data.map((event, index) => ({
-      ...event,
-      pin_idx: index
-    }));
-    setEvents(eventsWithPinKey);
-    console.log('fetchEvents-- '+JSON.stringify(eventsWithPinKey, null, 2));
+    setEvents(data);
   } catch (error) {
     console.error('Error fetching events:', error);
   }
@@ -99,26 +146,24 @@ const fetchEvents = async () => {
 const fetchVisits = async (eventId = null) => {
   try {
     const data = await visitApi.getVisits(eventId);
-    // 각 방문 객체에 pin_idx 추가
-    const visitsWithPinKey = data.map((visit, index) => ({
-      ...visit,
-      pin_idx: index
-    }));
-    console.log('fetchVisits-- '+JSON.stringify(visitsWithPinKey, null, 2));
-    setVisits(visitsWithPinKey);
+    setVisits(data);
   } catch (error) {
     console.error('Error fetching visits:', error);
   }
 };
   const handleEventSubmit = async (eventData) => {
     try {
+      const prepareData = (eventData) => {
+        const { pin_idx, markerText, ...pureEvent } = eventData;
+        return pureEvent;
+      };
       if (editingEvent) {
         // 수정일 경우
-        await eventApi.updateEvent(editingEvent.id, eventData);
+        await eventApi.updateEvent(editingEvent.id, prepareData(eventData));
         showSuccess("이벤트가 수정되었습니다.");
       } else {
         // 추가일 경우
-        await eventApi.addEvent(eventData);
+        await eventApi.addEvent(prepareData(eventData));
         showSuccess("이벤트가 추가되었습니다.");
       }
       fetchEvents();
@@ -132,8 +177,8 @@ const fetchVisits = async (eventId = null) => {
   const handleVisitSubmit = async (visitData) => {
     try {
       const prepareVisitData = (visitData) => {
-        const { tp_events, ...visitDataWithoutEvents } = visitData;
-        return visitDataWithoutEvents;
+        const { tp_events, pin_idx, markerText, event_id, ...pureVisitData } = visitData;
+        return pureVisitData;
       };
       if (editingVisit) {
         await visitApi.updateVisit(editingVisit.id, prepareVisitData(visitData));
@@ -181,7 +226,7 @@ const fetchVisits = async (eventId = null) => {
         />
         {selectedLocation && (
           <VisitForm
-            eventId={selectedEvent?.id || selectedVisit?.tp_events?.id}
+            eventId={selectedLocation.event_id}
             onSubmit={handleVisitSubmit}
             initialData={editingVisit}
             onClose={handleVisitFormClose}
@@ -205,7 +250,7 @@ const fetchVisits = async (eventId = null) => {
                 <LocationView
                   items={filteredItems}
                   activeTab={tabValue}
-                  selectedItem={tabValue === "events" ? selectedEvent : selectedVisit}
+                  selectedItem={selectedLocation}
                   onItemClick={tabValue === "events" ? handleEventClick : handleVisitClick}
                   onItemEdit={tabValue === "events" ? setEditingEvent : setEditingVisit}
                   onItemDelete={(id) => handleDelete(id, tabValue)}

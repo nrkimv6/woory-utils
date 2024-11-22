@@ -30,8 +30,9 @@ export const TimeCard = ({ visit, index, isSelected, onClick, onEdit, onDelete, 
       }}
     >
       <div style={{ position: 'absolute', left: -15, top: 10 }}>
-        <LocationMarker index={index} isEvent={false}
-              color={PASTEL_COLORS[index % PASTEL_COLORS.length]}
+        <LocationMarker 
+              markerText={visit.markerText}
+              color={PASTEL_COLORS[visit.pin_idx % PASTEL_COLORS.length]}
          />
       </div>
       <Text weight={500} size="sm" mb="xs">

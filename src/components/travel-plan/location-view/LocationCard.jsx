@@ -36,10 +36,9 @@ export const LocationCard = ({
         position: 'relative'
       }}
     >
-      <Group align="flex-start" noWrap>
+      <Group align="flex-start" nowrap>
         <LocationMarker
-          index={index}
-          isEvent={isEvent}
+              markerText={item.markerText}
           color={PASTEL_COLORS[index % PASTEL_COLORS.length]}
         />
         {cardContent}

@@ -1,9 +1,8 @@
 import React from 'react';
 import '@/styles/LocationMarker.css'  // 상단에 추가
 
-const LocationMarker = ({ index, isEvent, color, onClick }) => {
+const LocationMarker = ({ markerText, color, onClick }) => {
 
- const markerText = isEvent ? String.fromCharCode(65 + index) : (index + 1).toString();
  
  const darkenColor = (color, amount = 0.2) => {
   if(!color) return;
