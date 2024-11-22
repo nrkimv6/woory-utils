@@ -117,47 +117,98 @@ export const MapView = ({
     const bounds = new window.kakao.maps.LatLngBounds();
     const currentSelected = selectedLocationRef.current;
 
-    // 1. 새 오버레이들을 먼저 생성
-    const newOverlays = [];
-
-    // 비선택 마커 생성
-    items.forEach((item) => {
-      const isSelected = currentSelected?.id === item.id;
-      if (!isSelected) {
-        const overlay = createMarker(item, false);
-        if (overlay) {
-          overlay.setMap(kakaoMap);
-          newOverlays.push(overlay);
-          bounds.extend(overlay.getPosition());
-        }
-      }
-    });
-
-    // 선택된 마커 생성
-    if (currentSelected) {
-      const overlay = createMarker(currentSelected, true);
-      if (overlay) {
-        overlay.setMap(kakaoMap);
-        newOverlays.push(overlay);
-        bounds.extend(overlay.getPosition());
-      }
-    }
-
-    // 2. 새 오버레이가 모두 준비된 후에 이전 오버레이 제거
-    requestAnimationFrame(() => {
-      overlaysRef.current.forEach(overlay => {
+    // 현재 표시된 마커들의 키 집합
+    const existingMarkerKeys = new Set(
+      overlaysRef.current.map(overlay => {
         const content = overlay.getContent();
+        return Number(content.dataset.markerId);
+      })
+    );
+
+    // 새로 표시해야 할 마커들의 키 집합
+    const newMarkerKeys = new Set(
+      items.map(item => item.id).concat(currentSelected ? [currentSelected.id] : [])
+    );
+    console.log('newMarkerKeys ' + JSON.stringify(newMarkerKeys));
+    console.log('currentSelected  ' + JSON.stringify(currentSelected));
+    console.log('existingMarkerKeys  ' + JSON.stringify(existingMarkerKeys));
+
+    // 1. 제거해야 할 마커 처리
+    overlaysRef.current = overlaysRef.current.filter(overlay => {
+      const content = overlay.getContent();
+      const markerId = Number(content.dataset.markerId);
+
+      if (!newMarkerKeys.has(markerId)) {
         overlay.setMap(null);
         const root = markerRootsRef.current.get(content);
         if (root) {
           root.unmount();
           markerRootsRef.current.delete(content);
         }
-      });
-
-      // 3. 참조 업데이트
-      overlaysRef.current = newOverlays;
+        return false;
+      }
+      return true;
     });
+
+    // 2. 새로 추가하거나 업데이트해야 할 마커 처리
+    items.forEach(item => {
+      const isSelected = currentSelected?.id === item.id;
+      if (!existingMarkerKeys.has(item.id)) {
+        // 새로운 마커 생성
+        const overlay = createMarker(item, isSelected);
+        if (overlay) {
+          const content = overlay.getContent();
+          content.dataset.markerId = item.id; // DOM에 마커 ID 저장
+          overlay.setMap(kakaoMap);
+          overlaysRef.current.push(overlay);
+          bounds.extend(overlay.getPosition());
+          console.log('draw new marker '+item.id);
+        }
+      } else {
+        // 기존 마커 업데이트 (선택 상태 변경 등)
+        const existingOverlay = overlaysRef.current.find(
+          overlay => Number(overlay.getContent().dataset.markerId) === item.id
+        );
+          console.log('update marker '+item.id);
+
+        if (existingOverlay) {
+          bounds.extend(existingOverlay.getPosition());
+          // 필요한 경우 마커 상태 업데이트
+          const content = existingOverlay.getContent();
+          const root = markerRootsRef.current.get(content);
+          if (root) {
+            root.render(
+              <LocationMarker
+                index={item.pin_idx}
+                markerText={item.markerText}
+                color={PASTEL_COLORS[item.pin_idx % PASTEL_COLORS.length]}
+                onClick={() => onMarkerClick?.(item)}
+                style={{
+                  opacity: isSelected ? 1 : 0.5,
+                  transform: isSelected ? 'scale(1.2)' : 'none'
+                }}
+              />
+            );
+          console.log('existingOverlay marker '+item.id);
+          }
+        }
+      }
+    });
+
+    // selectedLocation이 items에 없는 경우 처리
+    if (currentSelected && !items.find(item => item.id === currentSelected.id)) {
+      if (!existingMarkerKeys.has(currentSelected.id)) {
+        const overlay = createMarker(currentSelected, true);
+        if (overlay) {
+          const content = overlay.getContent();
+          content.dataset.markerId = currentSelected.id;
+          overlay.setMap(kakaoMap);
+          overlaysRef.current.push(overlay);
+          bounds.extend(overlay.getPosition());
+          console.log('currentSelected marker '+item.id);
+        }
+      }
+    }
 
     const position = currentSelected ? new window.kakao.maps.LatLng(
       Number(currentSelected.lat),
@@ -183,6 +234,9 @@ export const MapView = ({
 
     if (overlaysRef.current.length > 0) {
       if (boundsDiff) {
+        const lastState = lastMapStateRef.current;
+        console.log('bounds changed '+JSON.stringify(bounds));
+        console.log('lastState.bounds '+JSON.stringify(lastState.bounds));
         kakaoMap.setBounds(bounds);
         lastMapStateRef.current.bounds = bounds;
       }
@@ -193,6 +247,9 @@ export const MapView = ({
         const lngDiff = Math.abs(position.getLng() - boundsCenter.getLng());
 
         if (latDiff > EPSILON || lngDiff > EPSILON) {
+          const lastState = lastMapStateRef.current;
+          console.log('position changed '+JSON.stringify(position));
+          console.log('lastState.position '+JSON.stringify(lastState.position));
           kakaoMap.panTo(position);
           lastMapStateRef.current.position = position;
         }
@@ -201,10 +258,8 @@ export const MapView = ({
       kakaoMap.panTo(position);
       lastMapStateRef.current.position = position;
     }
-
     updateInProgressRef.current = false;
-  }, [items, createMarker]);
-
+  }, [items, createMarker, onMarkerClick]);
 
   useEffect(() => {
     if (mapRef.current && selectedLocation) {
