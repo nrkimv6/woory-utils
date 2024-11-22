@@ -114,10 +114,11 @@ export const MapView = ({
       return;
     }
 
-    await safeCleanupOverlays();
-
     const bounds = new window.kakao.maps.LatLngBounds();
     const currentSelected = selectedLocationRef.current;
+
+    // 1. 새 오버레이들을 먼저 생성
+    const newOverlays = [];
 
     // 비선택 마커 생성
     items.forEach((item) => {
@@ -126,7 +127,7 @@ export const MapView = ({
         const overlay = createMarker(item, false);
         if (overlay) {
           overlay.setMap(kakaoMap);
-          overlaysRef.current.push(overlay);
+          newOverlays.push(overlay);
           bounds.extend(overlay.getPosition());
         }
       }
@@ -137,10 +138,26 @@ export const MapView = ({
       const overlay = createMarker(currentSelected, true);
       if (overlay) {
         overlay.setMap(kakaoMap);
-        overlaysRef.current.push(overlay);
+        newOverlays.push(overlay);
         bounds.extend(overlay.getPosition());
       }
     }
+
+    // 2. 새 오버레이가 모두 준비된 후에 이전 오버레이 제거
+    requestAnimationFrame(() => {
+      overlaysRef.current.forEach(overlay => {
+        const content = overlay.getContent();
+        overlay.setMap(null);
+        const root = markerRootsRef.current.get(content);
+        if (root) {
+          root.unmount();
+          markerRootsRef.current.delete(content);
+        }
+      });
+
+      // 3. 참조 업데이트
+      overlaysRef.current = newOverlays;
+    });
 
     const position = currentSelected ? new window.kakao.maps.LatLng(
       Number(currentSelected.lat),
@@ -186,8 +203,7 @@ export const MapView = ({
     }
 
     updateInProgressRef.current = false;
-  }, [items, createMarker, safeCleanupOverlays]);
-
+  }, [items, createMarker]);
 
 
   useEffect(() => {
