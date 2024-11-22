@@ -30,58 +30,58 @@ const KakaoMapList = () => {
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
-  
-// const handleEventClick = (event) => {
-//   setSelectedEvent(event);
-//   setSelectedLocation({
-//     id: event.id,
-//     lat: event.lat,
-//     lng: event.lng,
-//     pin_idx: event.pin_idx
-//   });
-// };
 
-// const handleVisitClick = (visit) => {
-//   setSelectedVisit(visit);
-//   setSelectedLocation({
-//     id: visit.id,
-//     lat: visit.tp_events?.lat,
-//     lng: visit.tp_events?.lng,
-//     pin_idx: visit.pin_idx
-//   });
-// };
+  // const handleEventClick = (event) => {
+  //   setSelectedEvent(event);
+  //   setSelectedLocation({
+  //     id: event.id,
+  //     lat: event.lat,
+  //     lng: event.lng,
+  //     pin_idx: event.pin_idx
+  //   });
+  // };
 
-const getLocationInfo = (item, type) => {
-  if (type === 'events') {
-    const obj = {
-      id: item.id,
-      event_id: item.id,
-      lat: item.lat,
-      lng: item.lng,
-      pin_idx: item.pin_idx,
-      markerText: item.markerText,
-      isValid: () => {
-        return obj.id && obj.lat && obj.lng
-      },
-      ...item
-    };
-    return obj;
-  } else {
-    const obj = {
-      id: item.id,
-      event_id: item.tp_events?.id,
-      lat: item.tp_events?.lat,
-      lng: item.tp_events?.lng,
-      pin_idx: item.pin_idx,
-      markerText: item.markerText,
-      isValid: () => {
-        return obj.event_id && obj.lat && obj.lng
-      },
-      ...item
-    };
-    return obj;
-  }
-};
+  // const handleVisitClick = (visit) => {
+  //   setSelectedVisit(visit);
+  //   setSelectedLocation({
+  //     id: visit.id,
+  //     lat: visit.tp_events?.lat,
+  //     lng: visit.tp_events?.lng,
+  //     pin_idx: visit.pin_idx
+  //   });
+  // };
+
+  const getLocationInfo = (item, type) => {
+    if (type === 'events') {
+      const obj = {
+        id: item.id,
+        event_id: item.id,
+        lat: item.lat,
+        lng: item.lng,
+        pin_idx: item.pin_idx,
+        markerText: item.markerText,
+        isValid: () => {
+          return obj.id && obj.lat && obj.lng
+        },
+        ...item
+      };
+      return obj;
+    } else {
+      const obj = {
+        id: item.id,
+        event_id: item.tp_events?.id,
+        lat: item.tp_events?.lat,
+        lng: item.tp_events?.lng,
+        pin_idx: item.pin_idx,
+        markerText: item.markerText,
+        isValid: () => {
+          return obj.event_id && obj.lat && obj.lng
+        },
+        ...item
+      };
+      return obj;
+    }
+  };
 
   // const handleEventClick = (event) => {
   //   setSelectedLocation(getLocationInfo(event, 'events'));
@@ -141,23 +141,23 @@ const getLocationInfo = (item, type) => {
     }
   };
 
-const fetchEvents = async () => {
-  try {
-    const data = await eventApi.getEvents();
-    setEvents(data);
-  } catch (error) {
-    console.error('Error fetching events:', error);
-  }
-};
+  const fetchEvents = async () => {
+    try {
+      const data = await eventApi.getEvents();
+      setEvents(data);
+    } catch (error) {
+      console.error('Error fetching events:', error);
+    }
+  };
 
-const fetchVisits = async (eventId = null) => {
-  try {
-    const data = await visitApi.getVisits(eventId);
-    setVisits(data);
-  } catch (error) {
-    console.error('Error fetching visits:', error);
-  }
-};
+  const fetchVisits = async (eventId = null) => {
+    try {
+      const data = await visitApi.getVisits(eventId);
+      setVisits(data);
+    } catch (error) {
+      console.error('Error fetching visits:', error);
+    }
+  };
   const handleEventSubmit = async (eventData) => {
     try {
       const prepareData = (eventData) => {
@@ -261,6 +261,13 @@ const fetchVisits = async (eventId = null) => {
                   onItemClick={tabValue === "events" ? handleEventClick : handleVisitClick}
                   onItemEdit={tabValue === "events" ? setEditingEvent : setEditingVisit}
                   onItemDelete={(id) => handleDelete(id, tabValue)}
+                  onItemUpdate={() => {
+                    if (activeTab === "events") {
+                      fetchEvents();
+                    } else {
+                      fetchVisits();
+                    }
+                  }}
                   type={tabValue}
                   date={filters.date}
                 /> : <></>}

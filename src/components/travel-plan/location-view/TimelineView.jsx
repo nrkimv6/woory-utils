@@ -1,114 +1,115 @@
-import React, { useState, useRef, useCallback } from 'react';
-import { Card, Text, Badge, ScrollArea, Stack, Group, Button, ActionIcon } from '@mantine/core';
+import React, { useState, useRef } from 'react';
+import { Card, Text, Badge, ScrollArea, Stack, Group, ActionIcon } from '@mantine/core';
 import { format, addMinutes } from 'date-fns';
 import { ChevronRight, ChevronDown, ZoomIn, ZoomOut } from 'lucide-react';
-import { DragDropContext, Draggable, Droppable } from 'react-beautiful-dnd';
-import CollapsibleEventActions from '@/components/travel-plan/location-view/CollapsibleEventActions'
+import { DragDropContext, Draggable, Droppable } from '@hello-pangea/dnd';
+import CollapsibleEventActions from '@/components/travel-plan/location-view/CollapsibleEventActions';
 import LocationMarker from '@/components/travel-plan/LocationMarker';
 import { PASTEL_COLORS } from '@/util/colors';
 
-// 줌 레벨에 따른 시간 간격 (분)
-const ZOOM_INTERVALS = {
-  1: 60, // 1시간
-  2: 30, // 30분
-  3: 15, // 15분
-  4: 10  // 10분
+const ZOOM_LEVELS = {
+  1: { interval: 60, height: 80 },
+  2: { interval: 30, height: 60 },
+  3: { interval: 15, height: 40 },
+  4: { interval: 10, height: 30 }
 };
 
-export const TimeCard = ({ visit, index, isSelected, onClick, onEdit, onDelete, color }) => {
+const TimeCard = ({ provided, isDragging, visit, index, isSelected, onClick, onEdit, onDelete }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
-    <Card
-      key={visit.id}
-      shadow="sm"
-      p="sm"
-      pl="xl"
-      withBorder
-      onClick={() => onClick(visit)}
-      style={{
-        position: 'absolute',
-        left: `${80 + (index * 15)}px`,
-        right: `${20 - (index * 15)}px`,
-        top: '10px',
-        borderLeft: '4px solid #228be6',
-        backgroundColor: isSelected ? '#f0f7ff' : 'white',
-        border: isSelected ? '2px solid #228be6' : '1px solid #dee2e6',
-        cursor: 'pointer',
-        zIndex: isSelected ? 100 : index,
-        overflow: 'visible'  // 추가
-      }}
+    <div
+      ref={provided.innerRef}
+      {...provided.draggableProps}
+      {...provided.dragHandleProps}
     >
-      <div style={{
-        position: 'absolute',
-        left: -15,  // 더 왼쪽으로 이동
-        top: -5,
-        transform: 'scale(0.7)',  // 크기만 줄임
-        transformOrigin: 'center left', // 왼쪽을 기준으로 크기 조절
-        zIndex: 1,  // 카드보다 위에 보이도록
-        overflow: 'visible'  // 부모 요소에서 잘리지 않도록
-      }}>
-        <LocationMarker
-          markerText={visit.markerText}
-          color={PASTEL_COLORS[visit.pin_idx % PASTEL_COLORS.length]}
-        />
-      </div>
-      <Text weight={500} size="sm" mb="xs">
-        {visit.tp_events?.name}
-      </Text>
-      <Text size="sm" color="dimmed" mb="xs" lineClamp={1}>
-        {visit.tp_events?.description}
-      </Text>
-      <Group spacing={5}>
-        {visit.tp_events?.tags?.split(',').map((tag, index) => (
-          <Badge key={index} size="sm" variant="outline">
-            {tag.trim()}
-          </Badge>
-        ))}
-      </Group>
-      {isSelected && (
-        <CollapsibleEventActions
-          isExpanded={isExpanded}
-          onToggle={() => setIsExpanded(!isExpanded)}
-          item={visit}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          type="visit"
-        />
-      )}
-    </Card>
+      <Card
+        shadow="sm"
+        p="sm"
+        pl="xl"
+        withBorder
+        onClick={() => onClick(visit)}
+        style={{
+          position: 'absolute',
+          left: `${80 + (index * 15)}px`,
+          right: `${20 - (index * 15)}px`,
+          top: '10px',
+          borderLeft: '4px solid #228be6',
+          backgroundColor: isSelected ? '#f0f7ff' : 'white',
+          border: isSelected ? '2px solid #228be6' : '1px solid #dee2e6',
+          cursor: 'pointer',
+          zIndex: isSelected ? 100 : index,
+          overflow: 'visible',
+          opacity: isDragging ? 0.6 : 1,
+          transform: isDragging ? 'scale(1.02)' : 'scale(1)',
+          transition: 'transform 0.2s, opacity 0.2s'
+        }}
+      >
+        <div style={{
+          position: 'absolute',
+          left: -15,
+          top: -5,
+          transform: 'scale(0.8)',
+          transformOrigin: 'center left',
+          zIndex: 1,
+          overflow: 'visible'
+        }}>
+          <LocationMarker
+            markerText={visit.markerText}
+            color={PASTEL_COLORS[visit.pin_idx % PASTEL_COLORS.length]}
+          />
+        </div>
+        <Text weight={500} size="sm" mb="xs">
+          {visit.tp_events?.name}
+        </Text>
+        <Text size="sm" color="dimmed" mb="xs" lineClamp={1}>
+          {visit.tp_events?.description}
+        </Text>
+        <Group spacing={5}>
+          {visit.tp_events?.tags?.split(',').map((tag, index) => (
+            <Badge key={index} size="sm" variant="outline">
+              {tag.trim()}
+            </Badge>
+          ))}
+        </Group>
+        {isSelected && (
+          <CollapsibleEventActions
+            isExpanded={isExpanded}
+            onToggle={() => setIsExpanded(!isExpanded)}
+            item={visit}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            type="visit"
+          />
+        )}
+      </Card>
+    </div>
   );
 };
 
-export const TimeSlot = ({
+const TimeSlot = ({
   time,
   visits,
   selectedItem,
   onItemClick,
   onItemEdit,
   onItemDelete,
+  zoomLevel,
   isCollapsed,
-  onToggleCollapse,
-  height,
-  zoomLevel
+  onToggleCollapse
 }) => {
   const formattedTime = format(time, 'HH:mm');
   const hasVisits = visits.length > 0;
-
-  if (isCollapsed && !hasVisits) {
-    return null;
-  }
 
   return (
     <div
       style={{
         position: 'relative',
-        height: height,
+        height: isCollapsed && !hasVisits ? '30px' : ZOOM_LEVELS[zoomLevel].height,
         borderBottom: '1px dashed #ddd',
-        backgroundColor: hasVisits ? 'transparent' : '#f8f9fa',
-        transition: 'height 0.3s ease'
+        transition: 'height 0.2s ease'
       }}
-      onClick={() => !hasVisits && onToggleCollapse(time.getHours())}
+      onClick={() => !hasVisits && onToggleCollapse()}
     >
       <Group position="apart" spacing="xs" style={{ position: 'absolute', left: 0, top: 0, width: '70px' }}>
         <Text size="sm" weight={500} color="dimmed">
@@ -122,30 +123,34 @@ export const TimeSlot = ({
       </Group>
 
       <Droppable droppableId={`timeslot-${time.getTime()}`}>
-        {(provided) => (
+        {(provided, snapshot) => (
           <div
             ref={provided.innerRef}
             {...provided.droppableProps}
-            style={{ marginLeft: '80px', height: '100%' }}
+            style={{
+              marginLeft: '80px',
+              height: '100%',
+              backgroundColor: snapshot.isDraggingOver ? '#e6f4ff' : 'transparent',
+              transition: 'background-color 0.2s ease'
+            }}
           >
             {visits.map((visit, index) => (
-              <Draggable key={visit.id} draggableId={`visit-${visit.id}`} index={index}>
-                {(provided) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.draggableProps}
-                    {...provided.dragHandleProps}
-                  >
-                    <TimeCard
-                      key={visit.id}
-                      visit={visit}
-                      index={visit.pin_idx}
-                      isSelected={selectedItem?.id === visit.id}
-                      onClick={onItemClick}
-                      onEdit={onItemEdit}
-                      onDelete={onItemDelete}
-                    />
-                  </div>
+              <Draggable
+                key={visit.id}
+                draggableId={`visit-${visit.id}`}
+                index={index}
+              >
+                {(provided, snapshot) => (
+                  <TimeCard
+                    provided={provided}
+                    isDragging={snapshot.isDragging}
+                    visit={visit}
+                    index={visit.pin_idx}
+                    isSelected={selectedItem?.id === visit.id}
+                    onClick={onItemClick}
+                    onEdit={onItemEdit}
+                    onDelete={onItemDelete}
+                  />
                 )}
               </Draggable>
             ))}
@@ -166,31 +171,14 @@ export const TimelineView = ({
   onItemDelete,
   onUpdateVisit
 }) => {
+  const [zoomLevel, setZoomLevel] = useState(1);
   const [collapsedHours, setCollapsedHours] = useState(
     Array.from({ length: 24 }, (_, i) => !visits.some(v => new Date(v.visit_time).getHours() === i))
   );
-  const [zoomLevel, setZoomLevel] = useState(1);
-  const scrollRef = useRef(null);
-
-  const handleToggleCollapse = (hour) => {
-    setCollapsedHours(prev => {
-      const newState = [...prev];
-      newState[hour] = !newState[hour];
-      return newState;
-    });
-  };
-
-  const handleZoomIn = () => {
-    setZoomLevel(prev => Math.min(prev + 1, 4));
-  };
-
-  const handleZoomOut = () => {
-    setZoomLevel(prev => Math.max(prev - 1, 1));
-  };
 
   const getTimeSlots = () => {
     const slots = [];
-    const interval = ZOOM_INTERVALS[zoomLevel];
+    const interval = ZOOM_LEVELS[zoomLevel].interval;
 
     for (let hour = 0; hour < 24; hour++) {
       for (let minute = 0; minute < 60; minute += interval) {
@@ -203,7 +191,7 @@ export const TimelineView = ({
   };
 
   const getVisitsForTimeSlot = (time) => {
-    const interval = ZOOM_INTERVALS[zoomLevel];
+    const interval = ZOOM_LEVELS[zoomLevel].interval;
     const slotEnd = addMinutes(time, interval);
 
     return visits.filter(visit => {
@@ -212,35 +200,80 @@ export const TimelineView = ({
     });
   };
 
+  // const handleDragEnd = async (result) => {
+  //   if (!result.destination) return;
+
+  //   const visitId = result.draggableId.split('-')[1];
+  //   const newTime = new Date(parseInt(result.destination.droppableId.split('-')[1]));
+
+  //   try {
+  //     await onUpdateVisit(visitId, {
+  //       visit_time: newTime.toISOString()
+  //     });
+  //   } catch (error) {
+  //     console.error('Failed to update visit time:', error);
+  //   }
+  // };
+
   const handleDragEnd = async (result) => {
     if (!result.destination) return;
 
     const visitId = result.draggableId.split('-')[1];
     const newTime = new Date(parseInt(result.destination.droppableId.split('-')[1]));
 
-    try {
-      // Supabase 업데이트
-      await onUpdateVisit(visitId, {
+    // 즉시 UI 업데이트
+    const updatedVisit = visits.find(v => v.id === parseInt(visitId));
+    if (updatedVisit) {
+      const optimisticData = {
+        ...updatedVisit,
         visit_time: newTime.toISOString()
-      });
-    } catch (error) {
-      console.error('Failed to update visit time:', error);
+      };
+
+      setVisits(prev => prev.map(visit =>
+        visit.id === parseInt(visitId) ? optimisticData : visit
+      ));
+
+      // 서버 업데이트
+      try {
+        await onUpdateVisit(visitId, { visit_time: newTime.toISOString() });
+      } catch (error) {
+        // 실패시 원래 상태로 복구
+        setVisits(prev => prev.map(visit =>
+          visit.id === parseInt(visitId) ? updatedVisit : visit
+        ));
+        console.error('Failed to update visit:', error);
+      }
     }
   };
 
   return (
-    <div style={{ position: 'relative' }}>
-      <Group position="right" p="xs" style={{ position: 'sticky', top: 0, zIndex: 100, backgroundColor: 'white' }}>
-        <ActionIcon onClick={handleZoomOut} disabled={zoomLevel === 1}>
-          <ZoomOut size={18} />
-        </ActionIcon>
-        <ActionIcon onClick={handleZoomIn} disabled={zoomLevel === 4}>
-          <ZoomIn size={18} />
-        </ActionIcon>
-      </Group>
+    <DragDropContext onDragEnd={handleDragEnd}>
+      <div style={{ position: 'relative' }}>
+        <Group position="right" p="xs" style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 100,
+          backgroundColor: 'white',
+          borderBottom: '1px solid #eee'
+        }}>
+          <ActionIcon
+            onClick={() => setZoomLevel(prev => Math.max(prev - 1, 1))}
+            disabled={zoomLevel === 1}
+            variant="light"
+          >
+            <ZoomOut size={18} />
+          </ActionIcon>
+          <Text size="sm" color="dimmed">{zoomLevel}x</Text>
+          <ActionIcon
+            onClick={() => setZoomLevel(prev => Math.min(prev + 1, 4))}
+            disabled={zoomLevel === 4}
+            variant="light"
+          >
+            <ZoomIn size={18} />
+          </ActionIcon>
+        </Group>
 
-      <ScrollArea ref={scrollRef} style={{ height: 'calc(100vh - 200px)' }}>
-        <DragDropContext onDragEnd={handleDragEnd}>
+        <ScrollArea style={{ height: 'calc(100vh - 200px)' }}>
           <Stack spacing={0} p="md">
             {getTimeSlots().map((time) => (
               <TimeSlot
@@ -251,15 +284,21 @@ export const TimelineView = ({
                 onItemClick={onItemClick}
                 onItemEdit={onItemEdit}
                 onDelete={onItemDelete}
-                isCollapsed={collapsedHours[time.getHours()]}
-                onToggleCollapse={handleToggleCollapse}
-                height={collapsedHours[time.getHours()] ? '30px' : '80px'}
                 zoomLevel={zoomLevel}
+                isCollapsed={collapsedHours[time.getHours()]}
+                onToggleCollapse={() => {
+                  const hour = time.getHours();
+                  setCollapsedHours(prev => {
+                    const newState = [...prev];
+                    newState[hour] = !newState[hour];
+                    return newState;
+                  });
+                }}
               />
             ))}
           </Stack>
-        </DragDropContext>
-      </ScrollArea>
-    </div>
+        </ScrollArea>
+      </div>
+    </DragDropContext>
   );
 };

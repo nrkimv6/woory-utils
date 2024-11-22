@@ -11,6 +11,7 @@ export const LocationView = ({
   onItemClick,
   onItemEdit,
   onItemDelete,
+  onItemUpdate,
   type,
   date
 }) => {
@@ -57,7 +58,9 @@ export const LocationView = ({
             onItemDelete={onItemDelete}
             onUpdateVisit={async (id, visitData) => {
               try {
+                console.log('update visit '+id+', '+ JSON.stringify(visitData));
                 await visitApi.updateVisit(id, visitData);
+                onItemUpdate();
               } catch (error) {
                 console.error('Failed to update visit:', error);
               }
