@@ -30,17 +30,26 @@ const KakaoMapList = () => {
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
+  
+const handleEventClick = (event) => {
+  setSelectedEvent(event);
+  setSelectedLocation({
+    id: event.id,
+    lat: event.lat,
+    lng: event.lng,
+    pin_idx: event.pin_idx
+  });
+};
 
-  const handleEventClick = (event) => {
-    setSelectedEvent(event);
-    setSelectedLocation(event);
-  };
-
-  const handleVisitClick = (visit) => {
-    setSelectedVisit(visit);
-    setSelectedLocation(visit.tp_events);
-  };
-
+const handleVisitClick = (visit) => {
+  setSelectedVisit(visit);
+  setSelectedLocation({
+    id: visit.id,
+    lat: visit.tp_events?.lat,
+    lng: visit.tp_events?.lng,
+    pin_idx: visit.pin_idx
+  });
+};
   const handleTabChange = (value) => {
     setActiveTab(value);
     setSelectedEvent(null);
@@ -72,23 +81,35 @@ const KakaoMapList = () => {
     }
   };
 
-  const fetchEvents = async () => {
-    try {
-      const data = await eventApi.getEvents();
-      setEvents(data);
-    } catch (error) {
-      console.error('Error fetching events:', error);
-    }
-  };
+const fetchEvents = async () => {
+  try {
+    const data = await eventApi.getEvents();
+    // 각 이벤트 객체에 pin_idx 추가
+    const eventsWithPinKey = data.map((event, index) => ({
+      ...event,
+      pin_idx: index
+    }));
+    setEvents(eventsWithPinKey);
+    console.log('fetchEvents-- '+JSON.stringify(eventsWithPinKey, null, 2));
+  } catch (error) {
+    console.error('Error fetching events:', error);
+  }
+};
 
-  const fetchVisits = async (eventId = null) => {
-    try {
-      const data = await visitApi.getVisits(eventId);
-      setVisits(data);
-    } catch (error) {
-      console.error('Error fetching visits:', error);
-    }
-  };
+const fetchVisits = async (eventId = null) => {
+  try {
+    const data = await visitApi.getVisits(eventId);
+    // 각 방문 객체에 pin_idx 추가
+    const visitsWithPinKey = data.map((visit, index) => ({
+      ...visit,
+      pin_idx: index
+    }));
+    console.log('fetchVisits-- '+JSON.stringify(visitsWithPinKey, null, 2));
+    setVisits(visitsWithPinKey);
+  } catch (error) {
+    console.error('Error fetching visits:', error);
+  }
+};
   const handleEventSubmit = async (eventData) => {
     try {
       if (editingEvent) {

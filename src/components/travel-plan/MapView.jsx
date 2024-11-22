@@ -6,6 +6,8 @@ import { VisitDetailView } from './VisitDetailView';
 import { useKakaoLoader } from '@/hooks/useKakaoLoader';
 import { PASTEL_COLORS } from '@/util/colors';
 import LocationMarker from './LocationMarker';
+
+
 export const MapView = ({ items, selectedLocation, type, onLocationSelect, onMarkerClick, visible = true }) => {
   const mapRef = useRef(null);
   const [marker, setMarker] = useState(null);
@@ -16,11 +18,17 @@ export const MapView = ({ items, selectedLocation, type, onLocationSelect, onMar
   const mapContainerRef = useRef(null);
   const overlaysRef = useRef([]);
   const initializedRef = useRef(false);
+  const selectedLocationRef = useRef(selectedLocation);
 
+  useEffect(() => {
+    selectedLocationRef.current = selectedLocation;
+  }, [selectedLocation]);
 
   const updateMarkersAndOverlays = useCallback(() => {
     const kakaoMap = mapRef.current;
     if (!kakaoMap || !items?.length) return;
+
+    const currentSelected = selectedLocationRef.current; // ref에서 현재 선택된 항목 가져오기
 
     overlaysRef.current.forEach(overlay => overlay.setMap(null));
     overlaysRef.current = [];
@@ -28,11 +36,11 @@ export const MapView = ({ items, selectedLocation, type, onLocationSelect, onMar
     const bounds = new window.kakao.maps.LatLngBounds();
     let minLat = 90, maxLat = -90, minLng = 180, maxLng = -180;
 
-    // 먼저 선택되지 않은 마커들을 그립니다
+    // 선택되지 않은 마커들 먼저 그리기
     items.forEach((item, index) => {
       const lat = Number(item.lat || item.tp_events?.lat);
       const lng = Number(item.lng || item.tp_events?.lng);
-      const isSelected = selectedLocation?.id === item.id;
+      const isSelected = currentSelected?.id === item.id;
 
       if (lat && lng && !isSelected) {
         minLat = Math.min(minLat, lat);
@@ -45,14 +53,14 @@ export const MapView = ({ items, selectedLocation, type, onLocationSelect, onMar
         if (!isFormType) {
           const MarkerComponent = () => (
             <LocationMarker
-              index={index}
+              index={item.pin_idx}
               isEvent={type === "events"}
-              color={PASTEL_COLORS[index % PASTEL_COLORS.length]}
+              color={PASTEL_COLORS[item.pin_idx % PASTEL_COLORS.length]}
               onClick={() => onMarkerClick?.(item)}
-              style={{ opacity: 0.5 }} // 선택되지 않은 마커는 반투명하게
+              style={{ opacity: 0.5 }}
             />
           );
-          console.log('items Marker Index'+index+', color:'+PASTEL_COLORS[index % PASTEL_COLORS.length]);
+          console.log('items Marker Index'+item.pin_idx+', color:'+PASTEL_COLORS[item.pin_idx % PASTEL_COLORS.length]);
 
           const container = document.createElement('div');
           ReactDOM.render(<MarkerComponent />, container);
@@ -70,26 +78,29 @@ export const MapView = ({ items, selectedLocation, type, onLocationSelect, onMar
       }
     });
 
-    // 선택된 마커를 마지막에 그려서 가장 위에 표시
-    if (selectedLocation) {
-      const lat = Number(selectedLocation.lat || selectedLocation.tp_events?.lat);
-      const lng = Number(selectedLocation.lng || selectedLocation.tp_events?.lng);
-
+    // 선택된 마커 그리기
+    // console.log('MapView-- '+JSON.stringify(currentSelected, null, 2));
+    if (currentSelected) {
+      const lat = Number(currentSelected.lat || currentSelected.tp_events?.lat);
+      const lng = Number(currentSelected.lng || currentSelected.tp_events?.lng);
+      
       if (lat && lng) {
         const position = new window.kakao.maps.LatLng(lat, lng);
-        const selectedIndex = items.findIndex(item => item.id === selectedLocation.id);
+        const selectedIndex1 = items.findIndex(item => item.id === currentSelected.id);
+        const selectedIndex = currentSelected.pin_idx;
 
         const MarkerComponent = () => (
           <LocationMarker
             index={selectedIndex}
             isEvent={type === "events"}
             color={PASTEL_COLORS[selectedIndex % PASTEL_COLORS.length]}
-            onClick={() => onMarkerClick?.(selectedLocation)}
-            style={{ transform: 'scale(1.2)' }} // 선택된 마커는 약간 크게
+            onClick={() => onMarkerClick?.(currentSelected)}
+            style={{ transform: 'scale(1.2)' }}
           />
         );
-        console.log('selectedLocation Marker Index'+selectedIndex+', color:'+PASTEL_COLORS[selectedIndex % PASTEL_COLORS.length]);
-        console.log('selected +'+selectedLocation);
+    console.log('MapView-- selectedIndex '+selectedIndex);
+    console.log('MapView-- selectedIndex1 '+selectedIndex1);
+    // console.log('MapView-- '+JSON.stringify(currentSelected, null, 2));
 
         const container = document.createElement('div');
         ReactDOM.render(<MarkerComponent />, container);
@@ -99,13 +110,14 @@ export const MapView = ({ items, selectedLocation, type, onLocationSelect, onMar
           content: container,
           map: kakaoMap,
           yAnchor: 1.3,
-          zIndex: 100 // 선택된 마커를 가장 위에 표시
+          zIndex: 100
         });
 
         overlaysRef.current.push(overlay);
         kakaoMap.panTo(position);
       }
     }
+
     else if (!isFormType && overlaysRef.current.length > 0) {
       const padding = 0;
       const virtualBounds = new window.kakao.maps.LatLngBounds(
@@ -119,31 +131,14 @@ export const MapView = ({ items, selectedLocation, type, onLocationSelect, onMar
       kakaoMap.panTo(overlaysRef.current[0].getPosition());
     }
 
-  }, [type, isFormType, items, onMarkerClick, selectedLocation]);
+  }, [type, isFormType, items, onMarkerClick]); // selectedLocation 제거, 대신 ref 사용
 
-  // props로 받은 selectedLocation이 변경될 때 state 업데이트
+  // selectedLocation이 변경될 때마다 마커 업데이트
   useEffect(() => {
     if (mapRef.current && selectedLocation) {
       updateMarkersAndOverlays();
     }
   }, [selectedLocation, updateMarkersAndOverlays]);
-  // useEffect(() => {
-  //   const kakaoMap = mapRef.current;
-  //   if (!kakaoMap || !selectedLocation) {
-  //     console.log("selectedLocation 실패.");
-  //     return;
-  //   }
-
-  //   const lat = selectedLocation.lat || selectedLocation.tp_events?.lat;
-  //   const lng = selectedLocation.lng || selectedLocation.tp_events?.lng;
-  //   console.log("selectedLocation " + selectedLocation);
-
-  //   if (lat && lng) {
-  //     const position = new window.kakao.maps.LatLng(lat, lng);
-  //     console.log("position " + position);
-  //     kakaoMap.panTo(position);
-  //   }
-  // }, [selectedLocation]);
 
   const handleMapClick = useCallback((mouseEvent) => {
     if (!isFormType) return;
@@ -236,6 +231,7 @@ export const MapView = ({ items, selectedLocation, type, onLocationSelect, onMar
   }, [visible]);
 
   return (
+
     <div style={{
       width: isFormType ? '100%' : '66.666%',
       position: 'relative',

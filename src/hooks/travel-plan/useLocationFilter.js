@@ -1,6 +1,10 @@
 import { useState, useMemo } from 'react';
 import { format, parseISO, setHours, setMinutes } from 'date-fns';
-
+const generateMarkerText = (index, type) => {
+  return type === 'events' 
+    ? String.fromCharCode(65 + index) 
+    : (index + 1).toString();
+};
 export const filterByDate = (items, date, activeTab) => {
   const dateStr = format(date, 'yyyy-MM-dd');
   return items.filter(item => {
@@ -55,7 +59,12 @@ const applyFilters = (items, filters, activeTab) => {
     filtered = sortVisitsByTime(filtered);
   }
   
-  return filtered;
+  // 필터링된 결과에 pin_idx 할당
+  return filtered.map((item, index) => ({
+    ...item,
+    pin_idx: index,
+    markerText: generateMarkerText(index, activeTab)
+  }));
 };
 
 export const useLocationFilter = (activeTab, events, visits) => {

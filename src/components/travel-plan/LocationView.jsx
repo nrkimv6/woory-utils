@@ -18,20 +18,19 @@ export const LocationView = ({
   const getFilteredItems = () => {
     if (!showOnlyUnscheduled) return items;
     const filteredItems= items.filter(item => !item.visit_time);
-    console.log('filteredItems'+filteredItems);
+    // console.log('filteredItems'+filteredItems);
     return filteredItems;
   };
 
   const getTimelineItems = () => {
     const filteredItems= items.filter(item => item.visit_time);
-    console.log('timelineItems'+filteredItems);
+    // console.log('timelineItems'+filteredItems);
     return filteredItems;
   };
 
 
-console.log('showOnlyUnscheduled '+showOnlyUnscheduled);
-console.log('type '+type);
-console.log('activeTab '+activeTab);
+// console.log('showOnlyUnscheduled '+showOnlyUnscheduled);
+console.log('type '+type+', activeTab '+activeTab);
   return (
     <div style={{ width: '50%', borderRight: '1px solid #eee' }}>
       <Group position="apart" p="md">

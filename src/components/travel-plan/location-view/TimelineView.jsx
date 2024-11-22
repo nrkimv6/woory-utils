@@ -7,7 +7,7 @@ import { PASTEL_COLORS } from '@/util/colors';
 
 export const TimeCard = ({ visit, index, isSelected, onClick, onEdit, onDelete, color }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  console.log('TimeCard Marker Index'+index+', color:'+PASTEL_COLORS[index % PASTEL_COLORS.length]);
+  // console.log('TimeCard Marker Index'+index+', color:'+PASTEL_COLORS[index % PASTEL_COLORS.length]);
 
   return (
     <Card 
@@ -79,7 +79,7 @@ const TimeSlot = ({ time, visits, selectedItem, onItemClick, onItemEdit, onItemD
         <TimeCard
           key={visit.id}
           visit={visit}
-          index={index}
+          index={visit.pin_idx}
           isSelected={selectedItem?.id === visit.id}
           onClick={onItemClick}
           onEdit={onItemEdit}

@@ -10,7 +10,7 @@ export const LocationList = ({ items, activeTab, selectedItem, onItemClick, onIt
           <LocationCard
             key={item.id}
             item={item}
-            index={index}
+            index={item.pin_idx}
             isSelected={selectedItem?.id === item.id}
             isEvent={type === 'events'}
             onClick={onItemClick}

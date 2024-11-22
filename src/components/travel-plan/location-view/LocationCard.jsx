@@ -22,7 +22,7 @@ export const LocationCard = ({
   ) : (
     <VisitCardContent item={item} isCollapsed={!isSelected}/>
   );
-  console.log('LocationCard Marker Index'+index+', color:'+PASTEL_COLORS[index % PASTEL_COLORS.length]);
+  // console.log('LocationCard Marker Index'+index+', color:'+PASTEL_COLORS[index % PASTEL_COLORS.length]);
 
   return (
     <Card
