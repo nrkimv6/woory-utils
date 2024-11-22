@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect  } from 'react';
 import { Card, Text, Badge, ScrollArea, Stack, Group, ActionIcon } from '@mantine/core';
 import { format, addMinutes } from 'date-fns';
 import { ChevronRight, ChevronDown, ZoomIn, ZoomOut } from 'lucide-react';
@@ -161,19 +161,25 @@ const TimeSlot = ({
     </div>
   );
 };
-
 export const TimelineView = ({
-  visits,
+  visits: originalVisits,
   date,
   selectedItem,
   onItemClick,
   onItemEdit,
   onItemDelete,
-  onUpdateVisit
+  onUpdateVisit,
+  ...props
 }) => {
+  const [localVisits, setLocalVisits] = useState(originalVisits);
+
+  useEffect(() => {
+    setLocalVisits(originalVisits);
+  }, [originalVisits]);
+  
   const [zoomLevel, setZoomLevel] = useState(1);
   const [collapsedHours, setCollapsedHours] = useState(
-    Array.from({ length: 24 }, (_, i) => !visits.some(v => new Date(v.visit_time).getHours() === i))
+    Array.from({ length: 24 }, (_, i) => !localVisits.some(v => new Date(v.visit_time).getHours() === i))
   );
 
   const getTimeSlots = () => {
@@ -194,55 +200,32 @@ export const TimelineView = ({
     const interval = ZOOM_LEVELS[zoomLevel].interval;
     const slotEnd = addMinutes(time, interval);
 
-    return visits.filter(visit => {
+    return localVisits.filter(visit => {
       const visitTime = new Date(visit.visit_time);
       return visitTime >= time && visitTime < slotEnd;
     });
   };
-
-  // const handleDragEnd = async (result) => {
-  //   if (!result.destination) return;
-
-  //   const visitId = result.draggableId.split('-')[1];
-  //   const newTime = new Date(parseInt(result.destination.droppableId.split('-')[1]));
-
-  //   try {
-  //     await onUpdateVisit(visitId, {
-  //       visit_time: newTime.toISOString()
-  //     });
-  //   } catch (error) {
-  //     console.error('Failed to update visit time:', error);
-  //   }
-  // };
 
   const handleDragEnd = async (result) => {
     if (!result.destination) return;
 
     const visitId = result.draggableId.split('-')[1];
     const newTime = new Date(parseInt(result.destination.droppableId.split('-')[1]));
+    
+    // 로컬 상태 즉시 업데이트
+    setLocalVisits(prev => prev.map(visit => 
+      visit.id === parseInt(visitId) 
+        ? { ...visit, visit_time: newTime.toISOString() }
+        : visit
+    ));
 
-    // 즉시 UI 업데이트
-    const updatedVisit = visits.find(v => v.id === parseInt(visitId));
-    if (updatedVisit) {
-      const optimisticData = {
-        ...updatedVisit,
-        visit_time: newTime.toISOString()
-      };
-
-      setVisits(prev => prev.map(visit =>
-        visit.id === parseInt(visitId) ? optimisticData : visit
-      ));
-
-      // 서버 업데이트
-      try {
+    try {
+      // 백그라운드에서 서버 업데이트
         await onUpdateVisit(visitId, { visit_time: newTime.toISOString() });
-      } catch (error) {
-        // 실패시 원래 상태로 복구
-        setVisits(prev => prev.map(visit =>
-          visit.id === parseInt(visitId) ? updatedVisit : visit
-        ));
-        console.error('Failed to update visit:', error);
-      }
+    } catch (error) {
+      // 실패시 로컬 상태 복구
+      setLocalVisits(originalVisits);
+      console.error('Failed to update visit:', error);
     }
   };
 
