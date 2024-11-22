@@ -13,7 +13,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             styles: {
               tab: {
                 padding: '10px 20px',
-                '&[data-active]': {
+                '&[dataActive]': {
                   borderBottom: '2px solid #228be6',
                 },
               },
