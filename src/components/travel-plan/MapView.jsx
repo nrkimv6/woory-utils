@@ -158,27 +158,60 @@ export const MapView = ({
         const overlay = createMarker(item, isSelected);
         if (overlay) {
           const content = overlay.getContent();
-          content.dataset.markerId = item.id; // DOM에 마커 ID 저장
+          content.dataset.markerId = item.id;
           overlay.setMap(kakaoMap);
           overlaysRef.current.push(overlay);
           bounds.extend(overlay.getPosition());
           console.log('draw new marker ' + item.id);
         }
       } else {
+        // 기존 마커 검증 및 업데이트
+        const existingOverlay = overlaysRef.current.find(
+          overlay => Number(overlay.getContent().dataset.markerId) === item.id
+        );
+
+        if (existingOverlay) {
+          // 마커가 실제로 맵에 표시되어 있는지 확인
+          const isValidMarker = existingOverlay.getMap() === kakaoMap && 
+                              document.body.contains(existingOverlay.getContent());
+
+          if (!isValidMarker) {
+            console.log('Marker exists but not valid, recreating marker ' + item.id);
+            // 기존 마커 제거
+            existingOverlay.setMap(null);
+            const content = existingOverlay.getContent();
+            const root = markerRootsRef.current.get(content);
+            if (root) {
+              root.unmount();
+              markerRootsRef.current.delete(content);
+            }
+
+            // 새로운 마커 생성
+            const newOverlay = createMarker(item, isSelected);
+            if (newOverlay) {
+              const newContent = newOverlay.getContent();
+              newContent.dataset.markerId = item.id;
+              newOverlay.setMap(kakaoMap);
+              overlaysRef.current = overlaysRef.current.filter(
+                overlay => Number(overlay.getContent().dataset.markerId) !== item.id
+              );
+              overlaysRef.current.push(newOverlay);
+            }
+          }
+          bounds.extend(existingOverlay.getPosition());
+        }
 
         const currentSelected = selectedLocationRef.current;
-        const prevSelected = lastMapStateRef.current.selectedId; // 이전 선택 상태 저장
+        const prevSelected = lastMapStateRef.current.selectedId;
 
-        // 선택된 마커가 변경되었는지 확인
+        // 선택 상태 변경 처리
         const selectionChanged = currentSelected?.id !== prevSelected;
 
         if (selectionChanged) {
-          // 선택 상태가 변경된 경우, 관련된 모든 마커 업데이트
           overlaysRef.current.forEach(overlay => {
             const markerId = Number(overlay.getContent().dataset.markerId);
             const markerItem = items.find(item => item.id === markerId);
 
-            // 이전 선택 마커이거나 새로 선택된 마커인 경우에만 업데이트
             if (markerItem && (markerId === prevSelected || markerId === currentSelected?.id)) {
               const isSelected = currentSelected?.id === markerId;
               const content = overlay.getContent();
@@ -202,38 +235,10 @@ export const MapView = ({
               bounds.extend(overlay.getPosition());
             }
           });
-        } else {
-          // // 기존 마커 업데이트 (선택 상태 변경 등)
-          // const existingOverlay = overlaysRef.current.find(
-          //   overlay => Number(overlay.getContent().dataset.markerId) === item.id
-          // );
-          // console.log('update marker ' + item.id);
-
-          // if (existingOverlay) {
-          //   bounds.extend(existingOverlay.getPosition());
-          //   // 필요한 경우 마커 상태 업데이트
-          //   const content = existingOverlay.getContent();
-          //   const root = markerRootsRef.current.get(content);
-          //   if (root) {
-          //     root.render(
-          //       <LocationMarker
-          //         index={item.pin_idx}
-          //         markerText={item.markerText}
-          //         color={PASTEL_COLORS[item.pin_idx % PASTEL_COLORS.length]}
-          //         onClick={() => onMarkerClick?.(item)}
-          //         style={{
-          //           opacity: isSelected ? 1 : 0.5,
-          //           transform: isSelected ? 'scale(1.2)' : 'none'
-          //         }}
-          //       />
-          //     );
-          //     console.log('existingOverlay marker ' + item.id);
-          //   }
-          // }
         }
       }
     });
-
+  
     // selectedLocation이 items에 없는 경우 처리
     if (currentSelected && !items.find(item => item.id === currentSelected.id)) {
       if (!existingMarkerKeys.has(currentSelected.id)) {
