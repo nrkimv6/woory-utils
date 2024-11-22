@@ -6,6 +6,7 @@ const LocationMarker = ({ index, isEvent, color, onClick }) => {
  const markerText = isEvent ? String.fromCharCode(65 + index) : (index + 1).toString();
  
  const darkenColor = (color, amount = 0.2) => {
+  if(!color) return;
    const hex = color.replace('#', '');
    const r = parseInt(hex.substring(0, 2), 16);
    const g = parseInt(hex.substring(2, 4), 16);
@@ -20,7 +21,7 @@ const LocationMarker = ({ index, isEvent, color, onClick }) => {
 
  return (
    <div 
-     onClick={onClick}
+     onClick={onClick?onClick:()=>{}}
      style={{ 
        width: '34px',
        height: '50px',

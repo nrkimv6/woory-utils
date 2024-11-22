@@ -93,9 +93,9 @@ const CollapsibleEventActions = ({ isExpanded, onToggle, item, onEdit, onDelete,
   <>
     <ActionIcon 
       size="sm" 
-      onClick={(e) => {
+      onClick={e => {
         e.stopPropagation();
-        onToggle(e);
+        onToggle();
       }}
       style={{ position: 'absolute', right: 10, top: 10 }}
     >
@@ -104,5 +104,4 @@ const CollapsibleEventActions = ({ isExpanded, onToggle, item, onEdit, onDelete,
     {isExpanded && <EventActions item={item} onEdit={onEdit} onDelete={onDelete} type={type} />}
   </>
 );
-
 export default CollapsibleEventActions;

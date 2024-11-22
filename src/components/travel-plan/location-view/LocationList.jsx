@@ -1,6 +1,5 @@
 import { Card, Select, Stack, Group, Tabs, Text, Badge, Button } from '@mantine/core';
 import {LocationCard} from './LocationCard';
-import {PASTEL_COLORS} from '@/util/colors'
 
 
 export const LocationList = ({ items, activeTab, selectedItem, onItemClick, onItemEdit, onItemDelete, type }) => {
@@ -18,7 +17,6 @@ export const LocationList = ({ items, activeTab, selectedItem, onItemClick, onIt
             onEdit={onItemEdit}
             onDelete={onItemDelete}
             type={type}
-            color={PASTEL_COLORS[index % PASTEL_COLORS.length]}
           />
         ))}
       </Stack>

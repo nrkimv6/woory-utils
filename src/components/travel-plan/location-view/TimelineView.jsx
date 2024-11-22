@@ -2,15 +2,19 @@ import React, { useState } from 'react';
 import { Card, Text, Badge, ScrollArea, Stack, Group, Button  } from '@mantine/core';
 import { format } from 'date-fns';
 import CollapsibleEventActions from '@/components/travel-plan/location-view/CollapsibleEventActions'
+import LocationMarker from '@/components/travel-plan/LocationMarker';
+import { PASTEL_COLORS } from '@/util/colors';
 
-export const TimeCard = ({ visit, index, isSelected, onClick, onEdit, onDelete }) => {
+export const TimeCard = ({ visit, index, isSelected, onClick, onEdit, onDelete, color }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  console.log('TimeCard Marker Index'+index+', color:'+PASTEL_COLORS[index % PASTEL_COLORS.length]);
 
   return (
     <Card 
       key={visit.id} 
       shadow="sm" 
       p="sm" 
+      pl="xl"
       withBorder
       onClick={() => onClick(visit)}
       style={{ 
@@ -25,6 +29,11 @@ export const TimeCard = ({ visit, index, isSelected, onClick, onEdit, onDelete }
         zIndex: isSelected ? 100 : index,
       }}
     >
+      <div style={{ position: 'absolute', left: -15, top: 10 }}>
+        <LocationMarker index={index} isEvent={false}
+              color={PASTEL_COLORS[index % PASTEL_COLORS.length]}
+         />
+      </div>
       <Text weight={500} size="sm" mb="xs">
         {visit.tp_events?.name}
       </Text>
@@ -40,20 +49,17 @@ export const TimeCard = ({ visit, index, isSelected, onClick, onEdit, onDelete }
       </Group>
       {isSelected && (
         <CollapsibleEventActions
+          isExpanded={isExpanded}
+          onToggle={() => setIsExpanded(!isExpanded)}
           item={visit}
           onEdit={onEdit}
           onDelete={onDelete}
-          isExpanded={isExpanded}
-          onToggle={(e) => {
-            e.stopPropagation();
-            setIsExpanded(!isExpanded);
-          }}
+          type="visit"
         />
       )}
     </Card>
   );
 };
-
 
 const TimeSlot = ({ time, visits, selectedItem, onItemClick, onItemEdit, onItemDelete }) => {
   const formattedTime = format(time, 'HH:mm');

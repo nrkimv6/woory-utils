@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Card, Select, Stack, Group, Tabs, Text, Badge, Button } from '@mantine/core';
 import { EventCardContent } from '../EventCardContent';
 import { VisitCardContent } from '../VisitCardContent';
-import LocationMarker from '@/components/travel-plan/LocationMarker';
 import CollapsibleEventActions from '@/components/travel-plan/location-view/CollapsibleEventActions'
+import LocationMarker from '@/components/travel-plan/LocationMarker';
+import { PASTEL_COLORS } from '@/util/colors';
 
 export const LocationCard = ({
   item,
@@ -13,15 +14,16 @@ export const LocationCard = ({
   onClick,
   onEdit,
   onDelete,
-  type,
-  color
+  type
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const cardContent = isEvent ? (
-    <EventCardContent item={item} />
+    <EventCardContent item={item} isCollapsed={!isSelected}/>
   ) : (
-    <VisitCardContent item={item} />
+    <VisitCardContent item={item} isCollapsed={!isSelected}/>
   );
+  console.log('LocationCard Marker Index'+index+', color:'+PASTEL_COLORS[index % PASTEL_COLORS.length]);
+
   return (
     <Card
       shadow="sm"
@@ -30,14 +32,15 @@ export const LocationCard = ({
       style={{
         cursor: 'pointer',
         backgroundColor: isSelected ? '#f0f7ff' : 'white',
-        border: isSelected ? '2px solid #228be6' : '1px solid #dee2e6'
+        border: isSelected ? '2px solid #228be6' : '1px solid #dee2e6',
+        position: 'relative'
       }}
     >
       <Group align="flex-start" noWrap>
         <LocationMarker
           index={index}
           isEvent={isEvent}
-          color={color}
+          color={PASTEL_COLORS[index % PASTEL_COLORS.length]}
         />
         {cardContent}
       </Group>
