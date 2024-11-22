@@ -162,35 +162,74 @@ export const MapView = ({
           overlay.setMap(kakaoMap);
           overlaysRef.current.push(overlay);
           bounds.extend(overlay.getPosition());
-          console.log('draw new marker '+item.id);
+          console.log('draw new marker ' + item.id);
         }
       } else {
-        // 기존 마커 업데이트 (선택 상태 변경 등)
-        const existingOverlay = overlaysRef.current.find(
-          overlay => Number(overlay.getContent().dataset.markerId) === item.id
-        );
-          console.log('update marker '+item.id);
 
-        if (existingOverlay) {
-          bounds.extend(existingOverlay.getPosition());
-          // 필요한 경우 마커 상태 업데이트
-          const content = existingOverlay.getContent();
-          const root = markerRootsRef.current.get(content);
-          if (root) {
-            root.render(
-              <LocationMarker
-                index={item.pin_idx}
-                markerText={item.markerText}
-                color={PASTEL_COLORS[item.pin_idx % PASTEL_COLORS.length]}
-                onClick={() => onMarkerClick?.(item)}
-                style={{
-                  opacity: isSelected ? 1 : 0.5,
-                  transform: isSelected ? 'scale(1.2)' : 'none'
-                }}
-              />
-            );
-          console.log('existingOverlay marker '+item.id);
-          }
+        const currentSelected = selectedLocationRef.current;
+        const prevSelected = lastMapStateRef.current.selectedId; // 이전 선택 상태 저장
+
+        // 선택된 마커가 변경되었는지 확인
+        const selectionChanged = currentSelected?.id !== prevSelected;
+
+        if (selectionChanged) {
+          // 선택 상태가 변경된 경우, 관련된 모든 마커 업데이트
+          overlaysRef.current.forEach(overlay => {
+            const markerId = Number(overlay.getContent().dataset.markerId);
+            const markerItem = items.find(item => item.id === markerId);
+
+            // 이전 선택 마커이거나 새로 선택된 마커인 경우에만 업데이트
+            if (markerItem && (markerId === prevSelected || markerId === currentSelected?.id)) {
+              const isSelected = currentSelected?.id === markerId;
+              const content = overlay.getContent();
+              const root = markerRootsRef.current.get(content);
+
+              if (root) {
+                root.render(
+                  <LocationMarker
+                    index={markerItem.pin_idx}
+                    markerText={markerItem.markerText}
+                    color={PASTEL_COLORS[markerItem.pin_idx % PASTEL_COLORS.length]}
+                    onClick={() => onMarkerClick?.(markerItem)}
+                    style={{
+                      opacity: isSelected ? 1 : 0.5,
+                      transform: isSelected ? 'scale(1.2)' : 'none'
+                    }}
+                  />
+                );
+                console.log(`Update marker ${markerId}, selected: ${isSelected}`);
+              }
+              bounds.extend(overlay.getPosition());
+            }
+          });
+        } else {
+          // // 기존 마커 업데이트 (선택 상태 변경 등)
+          // const existingOverlay = overlaysRef.current.find(
+          //   overlay => Number(overlay.getContent().dataset.markerId) === item.id
+          // );
+          // console.log('update marker ' + item.id);
+
+          // if (existingOverlay) {
+          //   bounds.extend(existingOverlay.getPosition());
+          //   // 필요한 경우 마커 상태 업데이트
+          //   const content = existingOverlay.getContent();
+          //   const root = markerRootsRef.current.get(content);
+          //   if (root) {
+          //     root.render(
+          //       <LocationMarker
+          //         index={item.pin_idx}
+          //         markerText={item.markerText}
+          //         color={PASTEL_COLORS[item.pin_idx % PASTEL_COLORS.length]}
+          //         onClick={() => onMarkerClick?.(item)}
+          //         style={{
+          //           opacity: isSelected ? 1 : 0.5,
+          //           transform: isSelected ? 'scale(1.2)' : 'none'
+          //         }}
+          //       />
+          //     );
+          //     console.log('existingOverlay marker ' + item.id);
+          //   }
+          // }
         }
       }
     });
@@ -205,7 +244,7 @@ export const MapView = ({
           overlay.setMap(kakaoMap);
           overlaysRef.current.push(overlay);
           bounds.extend(overlay.getPosition());
-          console.log('currentSelected marker '+item.id);
+          console.log('currentSelected marker ' + item.id);
         }
       }
     }
@@ -231,15 +270,23 @@ export const MapView = ({
     };
 
     const { boundsDiff, positionDiff } = isStateChanged();
+    let flgUpdate = false;
 
     if (overlaysRef.current.length > 0) {
-      if (boundsDiff) {
+      if (boundsDiff && !bounds.isEmpty()) {
         const lastState = lastMapStateRef.current;
-        console.log('bounds changed '+JSON.stringify(bounds));
-        console.log('lastState.bounds '+JSON.stringify(lastState.bounds));
+        console.log('bounds changed ' + JSON.stringify(bounds));
+        console.log('lastState.bounds ' + JSON.stringify(lastState.bounds));
         kakaoMap.setBounds(bounds);
+        flgUpdate = true;
         lastMapStateRef.current.bounds = bounds;
+        console.log('flgUpdate');
       }
+      else {
+        console.log('Do not update since calculated bound is invalid');
+        console.log('overlaysRef size: ' + overlaysRef.current.length);
+      }
+
 
       if (position && positionDiff) {
         const boundsCenter = calculateBoundsCenter(bounds);
@@ -248,17 +295,31 @@ export const MapView = ({
 
         if (latDiff > EPSILON || lngDiff > EPSILON) {
           const lastState = lastMapStateRef.current;
-          console.log('position changed '+JSON.stringify(position));
-          console.log('lastState.position '+JSON.stringify(lastState.position));
+          console.log('position changed with bound... ' + JSON.stringify(position));
+          console.log('lastState.position ' + JSON.stringify(lastState.position));
           kakaoMap.panTo(position);
           lastMapStateRef.current.position = position;
+          flgUpdate = true;
         }
       }
     } else if (position && positionDiff) {
       kakaoMap.panTo(position);
       lastMapStateRef.current.position = position;
+      flgUpdate = true;
+      console.log('position changed ' + JSON.stringify(position));
     }
-    updateInProgressRef.current = false;
+    else{
+      console.log('nothing regarding positon/bound works... ' + JSON.stringify(position));
+    }
+
+    if (flgUpdate) {
+      lastMapStateRef.current = {
+        ...lastMapStateRef.current,
+        selectedId: currentSelected?.id
+      };
+      console.log('flgUpdate');
+    }
+      updateInProgressRef.current = false;
   }, [items, createMarker, onMarkerClick]);
 
   useEffect(() => {
