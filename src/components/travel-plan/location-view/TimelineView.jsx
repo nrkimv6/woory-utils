@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card, Text, Badge, ScrollArea, Stack, Group, Button  } from '@mantine/core';
+import { Card, Text, Badge, ScrollArea, Stack, Group, Button } from '@mantine/core';
 import { format } from 'date-fns';
 import CollapsibleEventActions from '@/components/travel-plan/location-view/CollapsibleEventActions'
 import LocationMarker from '@/components/travel-plan/LocationMarker';
@@ -10,30 +10,39 @@ export const TimeCard = ({ visit, index, isSelected, onClick, onEdit, onDelete, 
   // console.log('TimeCard Marker Index'+index+', color:'+PASTEL_COLORS[index % PASTEL_COLORS.length]);
 
   return (
-    <Card 
-      key={visit.id} 
-      shadow="sm" 
-      p="sm" 
+    <Card
+      key={visit.id}
+      shadow="sm"
+      p="sm"
       pl="xl"
       withBorder
       onClick={() => onClick(visit)}
-      style={{ 
+      style={{
         position: 'absolute',
-        left: `${80 + (index * 20)}px`,
-        right: `${20 - (index * 20)}px`,
+        left: `${80 + (index * 15)}px`,
+        right: `${20 - (index * 15)}px`,
         top: '10px',
         borderLeft: '4px solid #228be6',
         backgroundColor: isSelected ? '#f0f7ff' : 'white',
         border: isSelected ? '2px solid #228be6' : '1px solid #dee2e6',
         cursor: 'pointer',
         zIndex: isSelected ? 100 : index,
+        overflow: 'visible'  // 추가
       }}
     >
-      <div style={{ position: 'absolute', left: -15, top: 10 }}>
-        <LocationMarker 
-              markerText={visit.markerText}
-              color={PASTEL_COLORS[visit.pin_idx % PASTEL_COLORS.length]}
-         />
+      <div style={{
+        position: 'absolute',
+        left: -15,  // 더 왼쪽으로 이동
+        top: -5,
+        transform: 'scale(0.7)',  // 크기만 줄임
+        transformOrigin: 'center left', // 왼쪽을 기준으로 크기 조절
+        zIndex: 1,  // 카드보다 위에 보이도록
+        overflow: 'visible'  // 부모 요소에서 잘리지 않도록
+      }}>
+        <LocationMarker
+          markerText={visit.markerText}
+          color={PASTEL_COLORS[visit.pin_idx % PASTEL_COLORS.length]}
+        />
       </div>
       <Text weight={500} size="sm" mb="xs">
         {visit.tp_events?.name}
@@ -64,18 +73,18 @@ export const TimeCard = ({ visit, index, isSelected, onClick, onEdit, onDelete, 
 
 const TimeSlot = ({ time, visits, selectedItem, onItemClick, onItemEdit, onItemDelete }) => {
   const formattedTime = format(time, 'HH:mm');
-  
+
   return (
     <div style={{ position: 'relative', height: '80px', borderBottom: '1px dashed #ddd' }}>
-      <Text 
-        size="sm" 
-        weight={500} 
+      <Text
+        size="sm"
+        weight={500}
         color="dimmed"
         style={{ position: 'absolute', left: 0, top: 0 }}
       >
         {formattedTime}
       </Text>
-      
+
       {visits.map((visit, index) => (
         <TimeCard
           key={visit.id}
@@ -91,13 +100,13 @@ const TimeSlot = ({ time, visits, selectedItem, onItemClick, onItemEdit, onItemD
   );
 };
 
-export const TimelineView = ({ 
-  visits, 
-  date, 
+export const TimelineView = ({
+  visits,
+  date,
   selectedItem,
   onItemClick,
   onItemEdit,
-  onItemDelete 
+  onItemDelete
 }) => {
   const timeSlots = Array.from({ length: 24 }, (_, i) => {
     const slotDate = new Date(date);
@@ -116,8 +125,8 @@ export const TimelineView = ({
     <ScrollArea style={{ height: 'calc(100vh - 200px)' }}>
       <Stack spacing={0} p="md">
         {timeSlots.map((time) => (
-          <TimeSlot 
-            key={time.getTime()} 
+          <TimeSlot
+            key={time.getTime()}
             time={time}
             visits={getVisitsForTimeSlot(time)}
             selectedItem={selectedItem}
