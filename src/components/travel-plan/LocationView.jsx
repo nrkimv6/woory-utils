@@ -5,8 +5,10 @@ import { TimelineView } from './location-view/TimelineView';
 import { eventApi, visitApi } from '@/lib/travel-plan/api';
 
 export const LocationView = ({
+    timelineItems,
+  onTimelineUpdate,
   items,
-  activeTab,
+  displayType,
   selectedItem,
   onItemClick,
   onItemEdit,
@@ -16,6 +18,10 @@ export const LocationView = ({
   date
 }) => {
   const [showOnlyUnscheduled, setShowOnlyUnscheduled] = useState(false);
+
+  const handleTimelineChange = (updatedItems) => {
+    onTimelineUpdate(updatedItems);
+  };
 
   const getFilteredItems = () => {
     if (!showOnlyUnscheduled) return items;
@@ -37,10 +43,9 @@ export const LocationView = ({
         />
       </Group>
 
-      {showOnlyUnscheduled || activeTab === "events" ? (
+      {showOnlyUnscheduled || displayType === "events" ? (
         <LocationList
           items={items}
-          activeTab={activeTab}
           selectedItem={selectedItem}
           onItemClick={onItemClick}
           onItemEdit={onItemEdit}
@@ -50,7 +55,8 @@ export const LocationView = ({
       ) : (
         <>
           <TimelineView
-            visits={getTimelineItems()}
+            items={getTimelineItems()}
+            onItemsChange={handleTimelineChange}
             date={date}
             selectedItem={selectedItem}
             onItemClick={onItemClick}
@@ -68,7 +74,6 @@ export const LocationView = ({
           />
           <LocationList
             items={getFilteredItems()}
-            activeTab={activeTab}
             selectedItem={selectedItem}
             onItemClick={onItemClick}
             onItemEdit={onItemEdit}

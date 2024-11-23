@@ -3,7 +3,7 @@ import { DateInput } from '@mantine/dates';
 const categories = ["화장품", "게임", "연예인", "캐릭터"];
 const districts = ["동대문", "성수", "여의도", "잠실", "강남", "압구정", "홍대"];
 
-export const Filters = ({ activeTab, filters, onFilterChange }) => {
+export const Filters = ({ filterType, filters, onFilterChange }) => {
   return (
     <div style={{ padding: '1rem', background: 'white', borderBottom: '1px solid #eee' }}>
       <Group align="flex-start" spacing="md">
@@ -13,7 +13,7 @@ export const Filters = ({ activeTab, filters, onFilterChange }) => {
           placeholder="날짜 선택"
           valueFormat="YYYY-MM-DD"
         />
-        {activeTab === "events" && (
+        {filterType === "events" && (
           <Stack spacing="sm">
             <Select
               data={[

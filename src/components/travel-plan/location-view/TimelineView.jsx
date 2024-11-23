@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Card, Text, Badge, ScrollArea, Stack, Group, ActionIcon } from '@mantine/core';
+import { Card, Text, Badge, ScrollArea, Stack, Group } from '@mantine/core';
 import { format, addMinutes } from 'date-fns';
-import { ChevronRight, ChevronDown, ZoomIn, ZoomOut } from 'lucide-react';
-import { DragDropContext, Draggable, Droppable } from '@hello-pangea/dnd';
-import CollapsibleEventActions from '@/components/travel-plan/location-view/CollapsibleEventActions';
-import LocationMarker from '@/components/travel-plan/LocationMarker';
-import { PASTEL_COLORS } from '@/util/colors';
+// import { DragDropContext, Draggable, Droppable } from '@hello-pangea/dnd';
+import { DndContext } from '@dnd-kit/core';
+import { useDroppable } from '@dnd-kit/core';
+
+import TimeCard from './TimeCard'
+import TimeBridge from './TimeBridge'
 
 const ZOOM_LEVELS = {
   1: { interval: 60, height: 80 },
@@ -13,135 +14,53 @@ const ZOOM_LEVELS = {
   3: { interval: 15, height: 40 },
   4: { interval: 10, height: 30 }
 };
-const TimeCard = ({ provided, isDragging, visit, index, isSelected, onClick, onEdit, onDelete }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-
-  const cardStyle = {
-    position: 'absolute',
-    left: '80px',
-    right: '20px',
-    top: '10px',
-    borderLeft: '4px solid #228be6',
-    backgroundColor: isSelected ? '#f0f7ff' : 'white',
-    border: isSelected ? '2px solid #228be6' : '1px solid #dee2e6',
-    cursor: 'pointer',
-    zIndex: isSelected ? 100 : index,
-    overflow: 'visible',
-    opacity: isDragging ? 0.6 : 1,
-    transform: isDragging ? 'scale(1.02)' : 'scale(1)',
-    transition: 'transform 0.2s, opacity 0.2s'
-  };
-
-  return (
-    <div
-      ref={provided?.innerRef}
-      {...(provided.draggableProps )}
-      {...( provided.dragHandleProps)}
-    >
-      <Card
-        shadow="sm"
-        p="sm"
-        pl="xl"
-        withBorder
-        onClick={() => onClick(visit)}
-        style={cardStyle}
-      >
-        <div style={{
-          position: 'absolute',
-          left: -15,
-          top: -5,
-          transform: 'scale(0.8)',
-          transformOrigin: 'center left',
-          zIndex: 1,
-          overflow: 'visible'
-        }}>
-          <LocationMarker
-            markerText={visit.markerText}
-            color={PASTEL_COLORS[visit.pin_idx % PASTEL_COLORS.length]}
-          />
-        </div>
-        <Text weight={500} size="sm" mb="xs">
-          {visit.tp_events?.name}
-        </Text>
-        <Text size="sm" color="dimmed" mb="xs" lineClamp={1}>
-          {visit.tp_events?.description}
-        </Text>
-        <Group spacing={5}>
-          {visit.tp_events?.tags?.split(',').map((tag, index) => (
-            <Badge key={index} size="sm" variant="outline">
-              {tag.trim()}
-            </Badge>
-          ))}
-        </Group>
-        {isSelected && (
-          <CollapsibleEventActions
-            isExpanded={isExpanded}
-            onToggle={() => setIsExpanded(!isExpanded)}
-            item={visit}
-            onEdit={onEdit}
-            onDelete={onDelete}
-            type="visit"
-          />
-        )}
-      </Card>
-    </div>
-  );
-};
-
 const TimeSlot = React.memo(function TimeSlot({ time,
-  visits,
+  items,
   selectedItem,
   onItemClick,
   onItemEdit,
   onItemDelete,
   zoomLevel,
   isCollapsed,
-  onExpandCollapsed }) {
-  const [dragOverTimer, setDragOverTimer] = useState(null);
+  onToggleCollapse }) {
+  // const [dragOverTimer, setDragOverTimer] = useState(null);
   const formattedTime = format(time, 'HH:mm');
-  const hasVisits = visits.length > 0;
+  const hasVisits = items.length > 0;
 
-  const handleDragOver = () => {
-    if (isCollapsed) {
-      if (dragOverTimer) clearTimeout(dragOverTimer);
-      const timer = setTimeout(() => {
-        onExpandCollapsed();
-      }, 3000);
-      setDragOverTimer(timer);
+  const handleClick = () => {
+    if (!hasVisits) {
+      onToggleCollapse(time.getHours());
     }
   };
 
-  const handleDragLeave = () => {
-    if (dragOverTimer) {
-      clearTimeout(dragOverTimer);
-      setDragOverTimer(null);
-    }
-  };
-
+  const {setNodeRef} = useDroppable({
+  id: `timeslot-${time.getTime()}`
+});
 
   return (
     <div
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
+      onClick={handleClick}
+      // onDragOver={handleDragOver}
+      // onDragLeave={handleDragLeave}
       style={{
         position: 'relative',
         height: isCollapsed && !hasVisits ? '30px' : ZOOM_LEVELS[zoomLevel].height,
         borderBottom: '1px dashed #ddd',
-        transition: 'height 0.2s ease'
+        transition: 'height 0.2s ease, background-color 0.2s ease',
+        cursor: hasVisits ? 'default' : 'pointer'
       }}
     >
-      {/* onClick={() => !hasVisits && onToggleCollapse(time.getHours())} */}
       <Group position="apart" spacing="xs" style={{ position: 'absolute', left: 0, top: 0, width: '70px' }}>
         <Text size="sm" weight={500} color="dimmed">
           {formattedTime}
         </Text>
-        {!hasVisits && (
-          <ActionIcon size="xs" variant="subtle">
-            {isCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
-          </ActionIcon>
-        )}
       </Group>
-
+      <div ref={setNodeRef}>
+          {/* 타임슬롯의 속성대로 Droppable 있어야 할 것 같은데...? 잘 모르겠음... */}
+      </div>
+      {/* 
+      //#TODO DragOver상태에서 선표시
+      //#question : provided는 뭔가?
       <Droppable droppableId={`timeslot-${time.getTime()}`}>
         {(provided, snapshot) => (
           <div
@@ -150,11 +69,14 @@ const TimeSlot = React.memo(function TimeSlot({ time,
             style={{
               marginLeft: '80px',
               height: '100%',
-              backgroundColor: snapshot.isDraggingOver ? '#e6f4ff' : 'transparent',
+              backgroundColor: snapshot.isDraggingOver ? '#e6f4ff' : 'transparent',  (추측 : 드래그오버 상태에서 색상변경)
               transition: 'background-color 0.2s ease'
             }}
           >
-            {visits.map((visit, index) => (
+            {items.map((visit, index) => (
+
+
+            // #question : 이걸 날렸으면 useDraggable을 넣어야 하지 않나..?
               <Draggable
                 key={visit.id}
                 draggableId={`visit-${visit.id}`}
@@ -178,13 +100,60 @@ const TimeSlot = React.memo(function TimeSlot({ time,
             {provided.placeholder}
           </div>
         )}
-      </Droppable>
+      </Droppable> */}
     </div>
   );
 });
 
+//요약 : TimeCard가 존재하지 않는 영역(timeSlot 2개 이상)을 접었다 펼수있음
+//접은 경우 시간부분이 ... 로 보임
+//가장 첫시간과 가장 끝시간은 접히지 않음
+const CollapsedTimeRange = ({ startHour, endHour, onExpand }) => {
+  //TODO DND중 1초간 머무르면 Collapsed가 풀리게 구현
+const {setNodeRef} = useDroppable({
+  id:`collapsed-${startHour}-${endHour}`
+});
+  return (
+    <div ref={setNodeRef}>
+      {(provided, snapshot) => (
+        <div
+          ref={provided.innerRef}
+          {...provided.droppableProps}
+          onClick={onExpand}
+          // onDragOver={handleDragOver} --> 접힌영역에 1초간 머무르면 저절로 펴져야 함
+          // onDragEnd={handleDragEnd} --> 나머지는 잘모르겠음 일단
+          // onDragLeave={handleDragLeave}
+          style={{
+            height: '40px',  // 높이를 늘림
+            margin: '-5px 0', // 위아래 여백을 음수로 주어 인접 요소와 겹치게 함
+            borderBottom: '1px dashed #ddd',
+            backgroundColor: snapshot.isDraggingOver ? '#e9ecef' : '#f8f9fa',
+            display: 'flex',
+            alignItems: 'center',
+            cursor: 'pointer',
+            padding: '0 10px',
+            transition: 'all 0.2s ease',
+            transform: snapshot.isDraggingOver ? 'scale(1.01)' : 'scale(1)',
+          }}
+        >
+          <Group position="apart" style={{ width: '100%' }}>
+            <Text size="sm" color="dimmed">
+              {`${String(startHour).padStart(2, '0')}:00`}
+            </Text>
+            <Text size="sm" color="dimmed">...</Text>
+            <Text size="sm" color="dimmed">
+              {`${String(endHour).padStart(2, '0')}:00`}
+            </Text>
+          </Group>
+          {provided.placeholder}
+        </div>
+      )}
+    </div>
+  )
+};
+
 export const TimelineView = ({
-  visits: originalVisits,
+  items: originalVisits,
   date,
   selectedItem,
   onItemClick,
@@ -196,6 +165,49 @@ export const TimelineView = ({
   const [localVisits, setLocalVisits] = useState(originalVisits);
   const [collapsedRanges, setCollapsedRanges] = useState([]);
   const [zoomLevel, setZoomLevel] = useState(1);
+
+//이전 답변으로 추가
+  const renderTimelineItem = (item) => {
+    if (item.type === 'visit') {
+      return (
+
+// TimeCard의 특징
+//카드모양으로 TimeSlot의 일부를 차지
+//선택된 경우 isSelected DND 가능
+// 떨군 위치에 visit_time 업데이트 (--> onItemEdit)
+        <TimeCard
+          key={`visit-${item.id}`}
+          provided={provided}
+          isDragging={snapshot.isDragging}
+          visit={item}
+          index={visit.pin_idx}
+          isSelected={selectedItem?.id === visit.id}
+          onClick={onItemClick}
+          onEdit={onItemEdit}
+          onDelete={onItemDelete}
+        />
+      );
+    }
+
+    return (
+// TimeBridge 특징은 아래와 같아
+// - 카드형식으로 차지하는게 아니라 빈 형태에 세로로 가운데에 점선을 잇고 있어
+// - 그래프에 노드처럼 라벨을 1개 가지고 있어
+// - 이름, 소요시간, 타입, 위치 정보를 가져 (visit과 비슷할 것 같아)
+// - 이 영역 사이에 time card를 둘 수 있어(dnd) 둔다면 크기가 축소될거야
+// - 여행에서 이동수단, 휴식시간 등의 역할을 할거야.
+// DND를 할 필요는 없음.
+      <TimeBridge
+        key={`bridge-${item.id}`}
+        isDragging={snapshot.isDragging}
+        data={item}
+        index={visit.pin_idx}
+        onClick={onItemClick}
+        onEdit={onItemEdit}
+        onDelete={onItemDelete}
+      />
+    );
+  };
 
   const onToggleCollapse = useCallback((hour) => {
     setCollapsedRanges(prev => {
@@ -240,6 +252,20 @@ export const TimelineView = ({
     });
   }, [localVisits]);
 
+  const getTimeSlots = useCallback(() => {
+    const slots = [];
+    const interval = ZOOM_LEVELS[zoomLevel].interval;  // 60, 30, 15, 10분
+
+    for (let hour = 0; hour < 24; hour++) {
+      for (let minute = 0; minute < 60; minute += interval) {
+        const slotDate = new Date(date);
+        slotDate.setHours(hour, minute, 0, 0);
+        slots.push(slotDate);
+      }
+    }
+    return slots;
+  }, [zoomLevel, date]);
+
   const renderTimeSlots = useCallback(() => {
     const slots = getTimeSlots();
     const renderedSlots = [];
@@ -263,7 +289,7 @@ export const TimelineView = ({
           <TimeSlot
             key={time.getTime()}
             time={time}
-            visits={getVisitsForTimeSlot(time)}
+            items={getVisitsForTimeSlot(time)}
             selectedItem={selectedItem}
             onItemClick={onItemClick}
             onItemEdit={onItemEdit}
@@ -281,16 +307,7 @@ export const TimelineView = ({
     }
 
     return renderedSlots;
-  }, [
-    zoomLevel,
-    selectedItem,
-    localVisits,
-    collapsedRanges,
-    onItemClick,
-    onItemEdit,
-    onItemDelete,
-    onToggleCollapse
-  ]);
+  }, [getTimeSlots, getCollapsedRange, expandRange, getVisitsForTimeSlot, selectedItem, onItemClick, onItemEdit, onItemDelete, zoomLevel, onToggleCollapse]);
 
 
   useEffect(() => {
@@ -302,7 +319,7 @@ export const TimelineView = ({
     const ranges = [];
     let start = null;
 
-    // Create array marking hours with visits
+    // Create array marking hours with items
     const hoursWithVisits = new Array(24).fill(false);
     localVisits.forEach(visit => {
       const hour = new Date(visit.visit_time).getHours();
@@ -331,28 +348,45 @@ export const TimelineView = ({
     setCollapsedRanges(ranges);
   }, [localVisits]);
 
-  const isHourCollapsed = (hour) => {
-    return collapsedRanges.some(([start, end]) => hour >= start && hour <= end);
-  };
-
-  const getCollapsedRange = (hour) => {
+  const getCollapsedRange = useCallback((hour) => {
     return collapsedRanges.find(([start, end]) => hour >= start && hour <= end);
-  };
+  }, [collapsedRanges]);
 
-  const expandRange = (start, end) => {
+  const expandRange = useCallback((start, end) => {
+    const interval = ZOOM_LEVELS[zoomLevel].interval;
+    const slots = [];
 
-    console.log(
-      'expandRange : ' + JSON.stringify(prev => prev.filter(range =>
-        range[0] !== start || range[1] !== end
-      ))
-    );
+    // Generate all time slots between start and end
+    for (let hour = start; hour <= end; hour++) {
+      for (let minute = 0; minute < 60; minute += interval) {
+        const slotDate = new Date(date);
+        slotDate.setHours(hour, minute, 0, 0);
+        slots.push(
+          <TimeSlot
+            key={slotDate.getTime()}
+            time={slotDate}
+            items={getVisitsForTimeSlot(slotDate)}
+            selectedItem={selectedItem}
+            onItemClick={onItemClick}
+            onItemEdit={onItemEdit}
+            onDelete={onItemDelete}
+            zoomLevel={zoomLevel}
+            isCollapsed={false}
+            onToggleCollapse={onToggleCollapse}
+          />
+        );
+      }
+    }
 
+    // Remove the range from collapsedRanges
     setCollapsedRanges(prev => prev.filter(range =>
       range[0] !== start || range[1] !== end
     ));
-  };
 
-  const getVisitsForTimeSlot = (time) => {
+    return slots;
+  }, [zoomLevel, date, getVisitsForTimeSlot, selectedItem, onItemClick, onItemEdit, onItemDelete, onToggleCollapse]);
+
+  const getVisitsForTimeSlot = useCallback((time) => {
     const interval = ZOOM_LEVELS[zoomLevel].interval;
     const slotEnd = addMinutes(time, interval);
     const hour = time.getHours();
@@ -378,13 +412,14 @@ export const TimelineView = ({
     }
 
     return visitsInSlot;
-  };
+  }, [zoomLevel, localVisits]);
 
   const handleDragEnd = async (result) => {
     if (!result.destination) return;
 
     const visitId = result.draggableId.split('-')[1];
-    const newTime = new Date(parseInt(result.destination.droppableId.split('-')[1]));
+    const newTimeValue = parseInt(result.destination.droppableId.split('-')[1]);
+    const newTime = new Date(newTimeValue);
 
     // 로컬 상태 즉시 업데이트
     setLocalVisits(prev => prev.map(visit =>
@@ -402,55 +437,69 @@ export const TimelineView = ({
       console.error('Failed to update visit:', error);
     }
   };
-  const getTimeSlots = () => {
-    const slots = [];
-    const interval = ZOOM_LEVELS[zoomLevel].interval;  // 60, 30, 15, 10분
 
-    for (let hour = 0; hour < 24; hour++) {
-      for (let minute = 0; minute < 60; minute += interval) {
-        const slotDate = new Date(date);
-        slotDate.setHours(hour, minute, 0, 0);
-        slots.push(slotDate);
-      }
+  const handleDragLeave = () => {
+    if (dragOverTimer) {
+      clearTimeout(dragOverTimer);
+      setDragOverTimer(null);
+      console.log('handleDragLeave');
     }
-    return slots;
+  };
+  const onExpand = () => {
+    console.log('onExpand');
+  }
+  const handleDragStart = () => {
+    // Expand all collapsed ranges
+    collapsedRanges.forEach(([start, end]) => {
+      expandRange(start, end);
+    });
   };
 
+  // return (
+  //   <DragDropContext
+  //     onDragEnd={handleDragEnd}
+  //     onDragStart={handleDragStart}
+  //   >
+  //     <div style={{ position: 'relative' }}>
+  //       {/* ... existing zoom controls */}
+  //       <ScrollArea style={{ height: 'calc(100vh - 200px)' }}>
+  //         <Stack spacing={0} p="md">
+  //           {renderTimeSlots()}
+  //         </Stack>
+  //       </ScrollArea>
+  //     </div>
+  //   </DragDropContext>
+  // );
+
   return (
-    <DragDropContext onDragEnd={handleDragEnd}>
-      <div style={{ position: 'relative' }}>
-        {/* ... existing zoom controls */}
+    
+    <DndContext onDragEnd={(result) => {
+      const { active, over } = result;
+      if (!over) return;
+
+      const oldIndex = items.findIndex(i => i.id === active.id);
+      const newIndex = items.findIndex(i => i.id === over.id);
+
+      const newItems = [...items];
+      const [removed] = newItems.splice(oldIndex, 1);
+      newItems.splice(newIndex, 0, removed);
+
+      // 순서 재계산
+      newItems.forEach((item, index) => {
+        item.visitOrder = index + 1;
+      });
+
+      onItemsChange(newItems);
+    }}>
+      <div className="timeline-container">
         <ScrollArea style={{ height: 'calc(100vh - 200px)' }}>
           <Stack spacing={0} p="md">
             {renderTimeSlots()}
           </Stack>
         </ScrollArea>
+        {items.map(renderTimelineItem)}
       </div>
-    </DragDropContext>
+    </DndContext>
   );
 };
 
-const CollapsedTimeRange = ({ startHour, endHour, onExpand }) => (
-  <div
-    onClick={onExpand}
-    style={{
-      height: '30px',
-      borderBottom: '1px dashed #ddd',
-      backgroundColor: '#f8f9fa',
-      display: 'flex',
-      alignItems: 'center',
-      cursor: 'pointer',
-      padding: '0 10px'
-    }}
-  >
-    <Group position="apart" style={{ width: '100%' }}>
-      <Text size="sm" color="dimmed">
-        {`${String(startHour).padStart(2, '0')}:00`}
-      </Text>
-      <Text size="sm" color="dimmed">...</Text>
-      <Text size="sm" color="dimmed">
-        {`${String(endHour).padStart(2, '0')}:00`}
-      </Text>
-    </Group>
-  </div>
-);

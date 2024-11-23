@@ -1,8 +1,7 @@
 "use client"
 import React, { useEffect, useState } from 'react';
-import { Card, Select, Stack, Group, Tabs, Text, Badge, Button } from '@mantine/core';
+import { Group, Tabs } from '@mantine/core';
 import { eventApi, visitApi } from '@/lib/travel-plan/api';
-import { useKakaoLoader } from '@/hooks/useKakaoLoader';
 
 import EventForm from '@/components/travel-plan/EventForm';
 import VisitForm from '@/components/travel-plan/VisitForm';
@@ -13,43 +12,20 @@ import { useLocationFilter } from '@/hooks/travel-plan/useLocationFilter';
 import { showSuccess, showError } from '@/util/notification';
 
 // KakaoMapList.jsx
-const KakaoMapList = () => {
+const TravelPlan = () => {
   const [activeTab, setActiveTab] = useState("events");
-
-  const [viewMode, setViewMode] = useState('card'); // 'card' | 'timeline'
-  const isKakaoLoaded = useKakaoLoader();
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [events, setEvents] = useState([]);
-  const [visits, setVisits] = useState([]);
+  const [visitsAndTrans, setVisitsAndTrans] = useState([]);
+
   const [editingEvent, setEditingEvent] = useState(null);
   const [editingVisit, setEditingVisit] = useState(null);
-  // const [selectedEvent, setSelectedEvent] = useState(null);
-  // const [selectedVisit, setSelectedVisit] = useState(null);
-  const { filters, setFilters, filteredItems } = useLocationFilter(activeTab, events, visits);
 
-  const handleFilterChange = (key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-  };
-
-  // const handleEventClick = (event) => {
-  //   setSelectedEvent(event);
-  //   setSelectedLocation({
-  //     id: event.id,
-  //     lat: event.lat,
-  //     lng: event.lng,
-  //     pin_idx: event.pin_idx
-  //   });
-  // };
-
-  // const handleVisitClick = (visit) => {
-  //   setSelectedVisit(visit);
-  //   setSelectedLocation({
-  //     id: visit.id,
-  //     lat: visit.tp_events?.lat,
-  //     lng: visit.tp_events?.lng,
-  //     pin_idx: visit.pin_idx
-  //   });
-  // };
+  const { filters, setFilters, filteredItems } = useLocationFilter(
+    activeTab,
+    events,
+    visitsAndTrans
+  );
 
   const getLocationInfo = (item, type) => {
     if (type === 'events') {
@@ -83,47 +59,47 @@ const KakaoMapList = () => {
     }
   };
 
-  // const handleEventClick = (event) => {
-  //   setSelectedLocation(getLocationInfo(event, 'events'));
-  // };
-
-  // const handleVisitClick = (visit) => {
-  //   setSelectedLocation(getLocationInfo(visit, 'visits'));
-  // };
-
-
-  const handleEventClick = (event) => {
-    console.log('handleEventClick received:', event); // 디버깅 로그
-    if (!event) {
-      console.warn('Event object is undefined');
-      return;
-    }
-    setSelectedLocation(getLocationInfo(event, 'events'));
-  };
-
-  const handleVisitClick = (visit) => {
-    console.log('handleVisitClick received:', visit); // 디버깅 로그
-    if (!visit) {
-      console.warn('Visit object is undefined');
-      return;
-    }
-    setSelectedLocation(getLocationInfo(visit, 'visits'));
-  };
-
   const handleTabChange = (value) => {
     setActiveTab(value);
-    // setSelectedEvent(null);
-    // setSelectedVisit(null);
     setSelectedLocation(null);
 
-    setViewMode(value === 'visits' ? 'timeline' : 'card');
     if (value === "events") {
       fetchEvents();
     } else {
       fetchVisits();
     }
   };
+  const handleFilterChange = (key, value) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
 
+
+  const handleClick = (event) => {
+    const handleEventClick = (event) => {
+      console.log('handleEventClick received:', event);
+      if (!event) {
+        console.warn('Event object is undefined');
+        return;
+      }
+      setSelectedLocation(getLocationInfo(event, 'events'));
+    };
+
+    const handleVisitClick = (visit) => {
+      console.log('handleVisitClick received:', visit);
+      if (!visit) {
+        console.warn('Visit object is undefined');
+        return;
+      }
+      setSelectedLocation(getLocationInfo(visit, 'visits'));
+    };
+    return tabValue === "events" ? handleEventClick : handleVisitClick;
+  };
+
+  const handleStartEdit = (item) => {
+    return tabValue === "events" ? setEditingEvent : setEditingVisit;
+  };
+
+  //#TODO TimeBridge 고려 필요함
   const handleDelete = async (id, type = 'event') => {
     try {
       if (type === 'event') {
@@ -150,14 +126,17 @@ const KakaoMapList = () => {
     }
   };
 
-  const fetchVisits = async (eventId = null) => {
+  const fetchVisits = async () => {
     try {
-      const data = await visitApi.getVisits(eventId);
-      setVisits(data);
+      const visits = await visitApi.getVisits();
+      const bridges = await bridgeApi.getBridges();
+      setVisitsAndTrans([...visits, ...bridges]);
     } catch (error) {
-      console.error('Error fetching visits:', error);
+      console.error('Error fetching timeline data:', error);
     }
   };
+
+  //#TODO TimeBridge 고려 필요함
   const handleEventSubmit = async (eventData) => {
     try {
       const prepareData = (eventData) => {
@@ -181,6 +160,8 @@ const KakaoMapList = () => {
     }
   };
 
+
+  //#TODO TimeBridge 고려 필요함
   const handleVisitSubmit = async (visitData) => {
     try {
       const prepareVisitData = (visitData) => {
@@ -202,13 +183,10 @@ const KakaoMapList = () => {
     }
   };
 
-  const handleVisitFormClose = () => {
-    setEditingVisit(null);
-  };
-  useEffect(() => {
-    fetchEvents();
-    fetchVisits();
-  }, []);
+  // useEffect(() => {
+  //   fetchEvents();
+  //   fetchVisits();
+  // }, []);
 
   useEffect(() => {
     if (activeTab === "events") {
@@ -222,9 +200,14 @@ const KakaoMapList = () => {
     setEditingEvent(null);  // 폼이 닫힐 때 초기화
   };
 
+  const handleVisitFormClose = () => {
+    setEditingVisit(null);
+  };
+
   return (
     <main style={{ minHeight: '100vh' }}>
       <Group position="right" p="md">
+      {/*  참고 : 폼2개는 탭에상관없이 열릴 수 있음. */}
         <EventForm
           onSubmit={handleEventSubmit}
           initialData={editingEvent}
@@ -248,18 +231,21 @@ const KakaoMapList = () => {
         {["events", "visits"].map(tabValue => (
           <Tabs.Panel key={tabValue} value={tabValue}>
             <Filters
-              activeTab={tabValue}
+              filterType={tabValue}
               filters={filters}
               onFilterChange={handleFilterChange}
             />
             <div style={{ display: 'flex', flex: 1 }}>
               {activeTab == tabValue ?
+
                 <LocationView
+                  timelineItems={timelineManager.items}
+                  onTimelineUpdate={(updatedItems) => filteredItems}
                   items={filteredItems}
-                  activeTab={tabValue}
+                  displayType={tabValue}
                   selectedItem={selectedLocation}
-                  onItemClick={tabValue === "events" ? handleEventClick : handleVisitClick}
-                  onItemEdit={tabValue === "events" ? setEditingEvent : setEditingVisit}
+                  onItemClick={handleClick}
+                  onItemEdit={handleStartEdit}
                   onItemDelete={(id) => handleDelete(id, tabValue)}
                   onItemUpdate={() => {
                     if (activeTab === "events") {
@@ -275,8 +261,8 @@ const KakaoMapList = () => {
                 items={filteredItems}
                 selectedLocation={selectedLocation}
                 type={tabValue}
-                onMarkerClick={tabValue === "events" ? handleEventClick : handleVisitClick}
-                visible={activeTab === tabValue}
+                onMarkerClick={handleClick}
+                visible={activeTab === tabValue}  //현재 보이지 않는 맵뷰는 이벤트 받지 않고 그리지도 않게 처리
               />
             </div>
           </Tabs.Panel>
@@ -287,4 +273,4 @@ const KakaoMapList = () => {
 };
 
 
-export default KakaoMapList;
+export default TravelPlan;

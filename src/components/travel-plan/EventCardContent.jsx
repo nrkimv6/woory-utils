@@ -15,7 +15,7 @@ export const EventCardContent = ({ item, isCollapsed = false }) => {
         {!isCollapsed && (
           <>
             <Text size="sm">
-              시간: {format(new Date(`2000-01-01T${item.open_time}`), 'HH:mm')} ~ 
+              영업시간: {format(new Date(`2000-01-01T${item.open_time}`), 'HH:mm')} ~ 
               {format(new Date(`2000-01-01T${item.close_time}`), 'HH:mm')}
             </Text>
             <Text size="sm">주소: {item.address}</Text>

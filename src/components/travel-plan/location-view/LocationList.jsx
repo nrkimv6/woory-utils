@@ -2,7 +2,7 @@ import { Card, Select, Stack, Group, Tabs, Text, Badge, Button } from '@mantine/
 import {LocationCard} from './LocationCard';
 
 
-export const LocationList = ({ items, activeTab, selectedItem, onItemClick, onItemEdit, onItemDelete, type }) => {
+export const LocationList = ({ items, selectedItem, onItemClick, onItemEdit, onItemDelete, type }) => {
   return (
     <div style={{ padding: '1rem', overflowY: 'auto' }}>
       <Stack spacing="md">

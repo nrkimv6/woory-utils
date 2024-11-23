@@ -1,5 +1,4 @@
 import { Menu, Button, Group, ActionIcon } from '@mantine/core';
-import { IconDots, IconEdit, IconTrash } from '@tabler/icons-react';
 import { useState } from "react";
 import { notifications } from '@mantine/notifications';
 import { ChevronDown, ChevronUp } from 'lucide-react';
@@ -27,41 +26,6 @@ export function EventActions({ item, onEdit, onDelete, type = 'event'  }) {
         }
     }
 
-    // return (
-    //     <Menu position="bottom-end">
-    //         <Menu.Target>
-    //             <Button variant="subtle" size="sm" px={5}>
-    //                 <IconDots size={16} />
-    //             </Button>
-    //         </Menu.Target>
-    //         <Menu.Dropdown>
-    //             <Menu.Item 
-    //                 icon={<IconEdit size={16} />}
-    //                 onClick={() => onEdit(event)}
-    //             >
-    //                 수정
-    //             </Menu.Item>
-    //             <Menu.Item 
-    //                 icon={<IconTrash size={16} />}
-    //                 color="red"
-    //                 disabled={isDeleting}
-    //                 onClick={handleDelete}
-    //             >
-    //                 삭제
-    //             </Menu.Item>
-    //   {type === 'visit' && item.reservation_url && (
-    //     <Button
-    //       variant="light"
-    //       component="a"
-    //       href={item.reservation_url}
-    //       target="_blank"
-    //     >
-    //       예약 페이지
-    //     </Button>
-    //   )}
-    //         </Menu.Dropdown>
-    //     </Menu>
-    // );
   return (
     <Group position="right" mt="md">
       <Button variant="light" onClick={() => onEdit(item)}>
@@ -74,14 +38,14 @@ export function EventActions({ item, onEdit, onDelete, type = 'event'  }) {
       >
         삭제
       </Button>
-      {type === 'visit' && item.reservation_url && (
+      { item.reservation_url && (
         <Button
           variant="light"
           component="a"
           href={item.reservation_url}
           target="_blank"
         >
-          예약 페이지
+          링크
         </Button>
       )}
     </Group>
