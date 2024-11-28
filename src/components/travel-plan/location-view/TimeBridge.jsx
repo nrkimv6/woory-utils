@@ -1,16 +1,12 @@
 import React from 'react';
-import { Card, Text, Group } from '@mantine/core';
 import { useDraggable } from '@dnd-kit/core';
 import { Bus, Coffee, Clock } from 'lucide-react';
-
-
-// TimeBridge 타입 정의
+import { addMinutes, differenceInMinutes } from 'date-fns';
 const BRIDGE_TYPES = {
   TRANSPORT: 'TRANSPORT',
   REST: 'REST',
   GENERIC: 'GENERIC'
 } ;
-
 
 const TimeBridge = ({ 
   id, 
@@ -22,7 +18,9 @@ const TimeBridge = ({
   isSelected,
   onClick,
   index = 0,
-  total = 1
+  total = 1,
+  slotHeight,
+  slotInterval
 }) => {
   const {attributes, listeners, setNodeRef, transform} = useDraggable({
     id: `bridge-${id}`,
@@ -44,17 +42,29 @@ const TimeBridge = ({
     }
   };
 
-  // Calculate position based on index and total bridges
-  const leftPosition = total === 1 ? '50%' : `${(index + 1) * (100 / (total + 1))}%`;
+  // Calculate position and height based on time
+  const start = new Date(startTime);
+  const end = addMinutes(start, duration);
+  const heightInSlots = Math.ceil(duration / slotInterval);
+  const heightInPixels = heightInSlots * slotHeight;
+
+  // Calculate horizontal position based on index and total bridges
+  const horizontalGap = 100 / (total + 1);
+  const leftPosition = `${horizontalGap * (index + 1)}%`;
 
   return (
     <div
       ref={setNodeRef}
       {...listeners}
       {...attributes}
-      className="relative w-full h-full"
+      className="absolute left-[80px] right-[20px]"
       style={{
+        height: `${heightInPixels}px`,
         transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined
+      }}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick?.({ id, type: 'bridge' });
       }}
     >
       {/* Vertical dashed line */}
@@ -66,24 +76,25 @@ const TimeBridge = ({
       {/* Content card */}
       <div 
         className={`
-          absolute p-2 -translate-x-1/2 bg-white rounded-sm
+          absolute p-2 -translate-x-1/2 bg-white rounded-sm shadow-sm
           ${isSelected ? 'ring-2 ring-blue-400' : ''}
         `}
         style={{ 
           left: leftPosition,
           top: '50%',
-          transform: 'translate(-50%, -50%)'
+          transform: 'translateY(-50%)'
         }}
-        onClick={() => onClick?.({ id, type: 'bridge' })}
       >
-        <Group spacing="xs" noWrap>
+        <div className="flex items-center gap-2">
           {getIcon()}
           <div>
-            <Text size="sm" weight={500}>{name}</Text>
-            <Text size="xs" color="dimmed">{duration}분</Text>
-            {location && <Text size="xs" color="dimmed">{location}</Text>}
+            <div className="text-sm font-medium">{name}</div>
+            <div className="text-xs text-gray-500">{duration}분</div>
+            {location && (
+              <div className="text-xs text-gray-500">{location}</div>
+            )}
           </div>
-        </Group>
+        </div>
       </div>
     </div>
   );

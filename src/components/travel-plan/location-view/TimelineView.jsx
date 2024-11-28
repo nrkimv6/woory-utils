@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Card, Text, Badge, ScrollArea, Stack, Group } from '@mantine/core';
-import { format, addMinutes } from 'date-fns';
+import { format, addMinutes, differenceInMinutes } from 'date-fns';
 // import { DragDropContext, Draggable, Droppable } from '@hello-pangea/dnd';
 import { DndContext } from '@dnd-kit/core';
 import { useDroppable } from '@dnd-kit/core';
@@ -16,21 +16,13 @@ const ZOOM_LEVELS = {
   4: { interval: 10, height: 30 }
 };
 const TimeSlot = React.memo(function TimeSlot({
-  time,
-  items,
-  selectedItem,
-  onItemClick,
-  onItemEdit,
-  onItemDelete,
-  zoomLevel,
+  time, zoomLevel,
   isCollapsed,
-  onToggleCollapse
+  onToggleCollapse,
 }) {
   const [dragOverTimer, setDragOverTimer] = useState(null);
   const formattedTime = format(time, 'HH:mm');
-  const hasItems = items.length > 0;
 
-  // DragOver 타이머 처리
   const handleDragOver = useCallback((e) => {
     if (!dragOverTimer && isCollapsed) {
       const timer = setTimeout(() => {
@@ -58,29 +50,22 @@ const TimeSlot = React.memo(function TimeSlot({
   const { setNodeRef, isOver } = useDroppable({
     id: `timeslot-${time.getTime()}`
   });
-  const getItemStyle = (index) => ({
-    position: 'absolute',
-    left: `${80 + (index * 15)}px`,
-    right: '20px',
-    top: '10px',
-    zIndex: index
-  });
 
   return (
     <div
       ref={setNodeRef}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
-      onClick={() => !hasItems && onToggleCollapse(time.getHours())}
+      onClick={() => onToggleCollapse(time.getHours())}
       className={`
         relative
         ${isOver ? 'bg-blue-50' : ''}
         transition-all duration-200
       `}
       style={{
-        height: isCollapsed && !hasItems ? '30px' : ZOOM_LEVELS[zoomLevel].height,
+        height: isCollapsed ? '30px' : ZOOM_LEVELS[zoomLevel].height,
         borderBottom: '1px dashed #ddd',
-        cursor: hasItems ? 'default' : 'pointer'
+        cursor: 'pointer'
       }}
     >
       <Group position="apart" spacing="xs" className="absolute left-0 top-0 w-[70px]">
@@ -89,45 +74,14 @@ const TimeSlot = React.memo(function TimeSlot({
         </Text>
       </Group>
 
+      {/* 시간 슬롯의 그리드 라인 */}
       <div className="relative ml-[80px] h-full">
-        {items.map((item, index) => {
-          if (item.type === 'bridge') {
-            return (
-              <TimeBridge
-                key={`bridge-${item.id}`}
-                id={item.id}
-                name={item.note}
-                duration={item.duration}
-                type={item.type}
-                location={item.address}
-                startTime={item.visitTime}
-                isSelected={selectedItem?.id === item.id}
-                onClick={onItemClick}
-                onEdit={onItemEdit}
-                onDelete={onItemDelete}
-                index={index}
-                total={items.length}
-                style={getItemStyle(index)}
-              />
-            );
-          }
-          return (
-            <TimeCard
-              key={`visit-${item.id}`}
-              item={item}
-              index={index}
-              isSelected={selectedItem?.id === item.id}
-              onClick={onItemClick}
-              onEdit={onItemEdit}
-              onDelete={onItemDelete}
-              style={getItemStyle(index)}
-            />
-          );
-        })}
+        <div className="absolute left-0 right-0 top-1/2 border-t border-dashed border-gray-200" />
       </div>
     </div>
   );
 });
+
 const CollapsedTimeRange = ({ time, startHour, endHour, onExpand, items, selectedItem }) => {
   const { setNodeRef, isOver } = useDroppable({
     id: `collapsed-${startHour}-${endHour}`
@@ -162,7 +116,6 @@ const CollapsedTimeRange = ({ time, startHour, endHour, onExpand, items, selecte
     </div>
   );
 };
-
 export const TimelineView = ({
   items,
   date,
@@ -176,19 +129,6 @@ export const TimelineView = ({
   const [localItems, setLocalItems] = useState([]);
   const [collapsedRanges, setCollapsedRanges] = useState([]);
   const [zoomLevel, setZoomLevel] = useState(1);
-
-  // // visits와 bridges를 통합하여 관리
-  // useEffect(() => {
-  //   const items = [
-  //     ...visits.map(v => ({ ...v, type: 'visit' })),
-  //     ...bridges.map(b => ({ ...b, type: 'bridge' }))
-  //   ].sort((a, b) => {
-  //     const timeA = new Date(a.visitTime).getTime();
-  //     const timeB = new Date(b.visitTime).getTime();
-  //     return timeA - timeB;
-  //   });
-  //   setLocalItems(items);
-  // }, [visits, bridges]);
 
   useEffect(() => {
     const sortedItems = items.sort((a, b) => {
@@ -220,50 +160,6 @@ export const TimelineView = ({
     } catch (error) {
       console.error('Failed to update timeline item:', error);
     }
-  };
-
-  const renderTimelineItem = (item) => {
-    if (item.type === 'visit') {
-      return (
-        <TimeCard
-          key={`visit-${item.id}`}
-          item={item}
-          index={item.pin_idx}
-          isSelected={selectedItem?.id === item.id}
-          onClick={onItemClick}
-          onEdit={onItemEdit}
-          onDelete={onItemDelete}
-        />
-      );
-    }
-
-    return (
-      // <TimeBridge
-      //   key={`bridge-${item.id}`}
-      //   data={item}
-      //   index={item.pin_idx}
-      //   onClick={onItemClick}
-      //   onEdit={onItemEdit}
-      //   onDelete={onItemDelete}
-      // />
-
-      <TimeBridge
-        key={`bridge-${item.id}`}
-        // data={item}
-        style={getItemStyle(index)}
-        id={`bridge-${item.id}`}
-        name={item.note}
-        duration={item.duration}
-        type={item.type}
-        location={item.address}
-        startTime={item.visitTime}
-        endTime={item.visitTime + item.duration}
-        index={item.pin_idx}
-        onClick={onItemClick}
-        onEdit={onItemEdit}
-        onDelete={onItemDelete}
-      />
-    );
   };
 
   const onToggleCollapse = useCallback((hour) => {
@@ -309,10 +205,38 @@ export const TimelineView = ({
     });
   }, [localItems, zoomLevel]);
 
-
   const getCollapsedRange = useCallback((hour) => {
     return collapsedRanges.find(([start, end]) => hour >= start && hour <= end);
   }, [collapsedRanges]);
+
+
+  const expandRange = useCallback((start, end) => {
+    const interval = ZOOM_LEVELS[zoomLevel].interval;
+    const slots = [];
+
+    for (let hour = start; hour <= end; hour++) {
+      for (let minute = 0; minute < 60; minute += interval) {
+        const slotDate = new Date(date);
+        slotDate.setHours(hour, minute, 0, 0);
+        slots.push(
+          <TimeSlot
+            key={`slot-${slotDate.getTime()}`}
+            time={slotDate}
+            isCollapsed={false}
+            onToggleCollapse={onToggleCollapse}
+            zoomLevel={zoomLevel}
+          />
+        );
+      }
+    }
+
+    // 해당 범위를 collapsedRanges에서 제거
+    setCollapsedRanges(prev => prev.filter(range =>
+      range[0] !== start || range[1] !== end
+    ));
+
+    return slots;
+  }, [date, zoomLevel, onToggleCollapse]);
 
   const getTimeSlots = useCallback(() => {
     const slots = [];
@@ -327,180 +251,6 @@ export const TimelineView = ({
     }
     return slots;
   }, [date, zoomLevel]);
-
-  const getTimelineItemsForSlot = useCallback((time) => {
-    const interval = ZOOM_LEVELS[zoomLevel].interval;
-    const slotEnd = addMinutes(time, interval);
-
-    return localItems.filter(item => {
-      const itemTime = new Date(item.visitTime);
-      // Bridge의 경우 duration을 고려해야 함
-      if (item.type === 'bridge') {
-        const itemEndTime = addMinutes(itemTime, item.duration || 0);
-        return itemTime <= slotEnd && itemEndTime >= time;
-      }
-      // Visit의 경우 기존 로직 유지
-      return itemTime >= time && itemTime < slotEnd;
-    });
-  }, [localItems, zoomLevel]);
-
-  const expandRange = useCallback((start, end) => {
-    const interval = ZOOM_LEVELS[zoomLevel].interval;
-    const slots = [];
-
-    // Generate all time slots between start and end
-    for (let hour = start; hour <= end; hour++) {
-      for (let minute = 0; minute < 60; minute += interval) {
-        const slotDate = new Date(date);
-        slotDate.setHours(hour, minute, 0, 0);
-        slots.push(
-          <TimeSlot
-            key={slotDate.getTime()}
-            time={slotDate}
-            items={getTimelineItemsForSlot(slotDate)}
-            selectedItem={selectedItem}
-            onItemClick={onItemClick}
-            onItemEdit={onItemEdit}
-            onDelete={onItemDelete}
-            zoomLevel={zoomLevel}
-            isCollapsed={false}
-            onToggleCollapse={onToggleCollapse}
-          />
-        );
-        console.log('slot time:' + slotDate.getTime());
-        console.log('slot sz:' + slots.length);
-      }
-    }
-
-    console.log("*********expandRange*********");
-    console.log(JSON.stringify(slots));
-    console.log("******************");
-
-    // Remove the range from collapsedRanges
-    setCollapsedRanges(prev => prev.filter(range =>
-      range[0] !== start || range[1] !== end
-    ));
-
-    return slots;
-  }, [date, getTimelineItemsForSlot, selectedItem, onItemClick, onItemEdit, onItemDelete, onToggleCollapse, zoomLevel]);
-
-
-  // const renderTimeSlots_old = useCallback(() => {
-  //   const slots = getTimeSlots();
-  //   const renderedSlots = [];
-
-  //   for (let i = 0; i < slots.length; i++) {
-  //     const time = slots[i];
-  //     const hour = time.getHours();
-  //     const range = getCollapsedRange(hour);
-
-  //     if (range && hour === range[0]) {
-  //       renderedSlots.push(
-  //         <CollapsedTimeRange
-  //           key={time.getTime()}
-  //           time={time}
-  //           items={[]}
-  //           selectedItem={null}
-  //           // key={`collapsed-${range[0]}-${range[1]}`}
-  //           startHour={range[0]}
-  //           endHour={range[1]}
-  //           onExpand={() => expandRange(range[0], range[1])}
-  //         />
-  //       );
-
-  //       console.log('CollapsedTimeRange slot time:'+time.getTime());
-  //       console.log('slot sz:'+renderedSlots.length);
-  //     } else if (!range) {
-  //       renderedSlots.push(
-  //         <TimeSlot
-  //           key={time.getTime()}
-  //           time={time}
-  //           items={getTimelineItemsForSlot(time)}
-  //           selectedItem={selectedItem}
-  //           onItemClick={onItemClick}
-  //           onItemEdit={onItemEdit}
-  //           onDelete={onItemDelete}
-  //           zoomLevel={zoomLevel}
-  //           isCollapsed={false}
-  //           onToggleCollapse={onToggleCollapse}
-  //           onExpandCollapsed={() => {
-  //             const range = getCollapsedRange(hour);
-  //             if (range) expandRange(range[0], range[1]);
-  //           }}
-  //         />
-  //       );
-
-  //       console.log('slot time:'+time.getTime());
-  //       console.log('slot sz:'+renderedSlots.length);
-  //     }
-  //   }
-
-  //   try {
-
-  //     console.log("*********expandRange*********");
-  //     console.log(JSON.stringify(renderedSlots));
-  //     console.log("******************");
-  //   } catch (e) {
-
-  //     try {
-  //       const cleanData = cleanReactStructure(renderedSlots);
-  //       console.log(JSON.stringify(cleanData, null, 2));
-  //     } catch (e) {
-  //       console.error('Error:', e);
-  //     }
-  //   }
-  //   return renderedSlots;
-
-  // }, [getTimeSlots, getCollapsedRange, expandRange, getTimelineItemsForSlot, selectedItem, onItemClick, onItemEdit, onItemDelete, zoomLevel, onToggleCollapse]);
-
-  const renderTimeSlots = useCallback(() => {
-    const slots = getTimeSlots();
-    const renderedSlots = [];
-
-    for (let i = 0; i < slots.length; i++) {
-      const time = slots[i];
-      const hour = time.getHours();
-      const range = getCollapsedRange(hour);
-
-      if (range && hour === range[0]) {
-        renderedSlots.push(
-          <CollapsedTimeRange
-            key={`collapsed-${time.getTime()}`}
-            time={time}
-            items={[]}
-            selectedItem={null}
-            startHour={range[0]}
-            endHour={range[1]}
-            onExpand={() => expandRange(range[0], range[1])}
-          />
-        );
-      } else if (!range) {
-        renderedSlots.push(
-          <TimeSlot
-            key={`slot-${time.getTime()}`}
-            time={time}
-            items={getTimelineItemsForSlot(time)}
-            selectedItem={selectedItem}
-            onItemClick={onItemClick}
-            onItemEdit={onItemEdit}
-            onDelete={onItemDelete}
-            zoomLevel={zoomLevel}
-            isCollapsed={false}
-            onToggleCollapse={onToggleCollapse}
-          />
-        );
-      }
-      console.log("*********renderTimeSlots*********");
-      const cleanData = cleanReactStructure(renderedSlots);
-      console.log(JSON.stringify(cleanData, null, 2));
-    }
-
-    return renderedSlots;
-  }, [getTimeSlots, getCollapsedRange, expandRange, getTimelineItemsForSlot, selectedItem, onItemClick, onItemEdit, onItemDelete, zoomLevel, onToggleCollapse]);
-
-  // useEffect(() => {
-  //   setLocalItems(originalVisits);
-  // }, [originalVisits]);
 
   useEffect(() => {
     // Initialize collapsed ranges
@@ -538,34 +288,128 @@ export const TimelineView = ({
 
 
 
+  const renderTimeSlots = () => {
+    return getTimeSlots().map(time => {
+      const hour = time.getHours();
+      const range = getCollapsedRange(hour);
 
-  const handleDragLeave = () => {
-    if (dragOverTimer) {
-      clearTimeout(dragOverTimer);
-      setDragOverTimer(null);
-      console.log('handleDragLeave');
-    }
-  };
-  const onExpand = () => {
-    console.log('onExpand');
-  }
-  const handleDragStart = () => {
-    // Expand all collapsed ranges
-    collapsedRanges.forEach(([start, end]) => {
-      expandRange(start, end);
+      if (range && hour === range[0]) {
+        return (
+          <CollapsedTimeRange
+            key={`collapsed-${time.getTime()}`}
+            startHour={range[0]}
+            endHour={range[1]}
+            onExpand={() => expandRange(range[0], range[1])}
+          />
+        );
+      }
+
+      if (!range) {
+        return (
+          <TimeSlot
+            key={`slot-${time.getTime()}`}
+            time={time}
+            isCollapsed={false}
+            onToggleCollapse={onToggleCollapse}
+            zoomLevel={zoomLevel}
+          />
+        );
+      }
+
+      return null;
     });
   };
+const calculateTopPosition = useCallback((startTime) => {
+  // date prop을 사용하여 해당 날짜의 자정 설정
+  const midnight = new Date(date);
+  midnight.setHours(0, 0, 0, 0);
+  
+  console.log('Time calculation:', {
+    input: startTime,
+    midnight,
+    date: date
+  });
+  
+  const minutesSinceMidnight = differenceInMinutes(startTime, midnight);
+  const slotHeight = ZOOM_LEVELS[zoomLevel].height;
+  const slotInterval = ZOOM_LEVELS[zoomLevel].interval;
+  
+  return (minutesSinceMidnight / slotInterval) * slotHeight;
+}, [date, zoomLevel]);
+
+const calculateHeight = useCallback((duration) => {
+  const slotHeight = ZOOM_LEVELS[zoomLevel].height;
+  const slotInterval = ZOOM_LEVELS[zoomLevel].interval;
+  
+  const height = (duration / slotInterval) * slotHeight;
+  
+  console.log('calculateHeight:', {
+    duration,
+    slotHeight,
+    slotInterval,
+    calculatedHeight: height
+  });
+
+  return height;
+}, [zoomLevel]);
 
 
   return (
-    <DndContext
-      onDragEnd={handleDragEnd}
-      modifiers={[restrictToVerticalAxis]}
-    >
+    <DndContext onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis]}>
       <ScrollArea style={{ height: 'calc(100vh - 200px)' }}>
-        <Stack key={date} spacing={0} p="md">
-          {renderTimeSlots()}
-        </Stack>
+        <div className="relative">
+          {/* 타임슬롯 그리드 */}
+          <Stack spacing={0}>
+            {renderTimeSlots()}
+          </Stack>
+
+          {/* TimeCard와 TimeBridge 렌더링 */}
+          {items.map(item => {
+            const startTime = new Date(item.visitTime);
+            const duration = item.duration || 0;
+            const topPosition = calculateTopPosition(startTime);
+            const itemHeight = calculateHeight(duration);
+
+            if (item.type === 'bridge') {
+              console.log(`Bridge ${item.id} rendering details:`, {
+                name: item.note,
+                visitTime: item.visitTime,
+                startTime: startTime.toISOString(),
+                duration,
+                calculatedTop: topPosition,
+                calculatedHeight: itemHeight,
+                zoomLevel,
+                slotHeight: ZOOM_LEVELS[zoomLevel].height,
+                slotInterval: ZOOM_LEVELS[zoomLevel].interval
+              });
+              console.log(JSON.stringify(item));
+
+              return (
+                <TimeBridge
+                  key={`bridge-${item.id}`}
+                  {...item}
+                  name={item.notes}
+                  style={{
+                    position: 'absolute',
+                    top: topPosition,
+                    height: itemHeight
+                  }}
+                />
+              );
+            }
+
+            return (
+              <TimeCard
+                key={`visit-${item.id}`}
+                {...item}
+                style={{
+                  position: 'absolute',
+                  top: topPosition
+                }}
+              />
+            );
+          })}
+        </div>
       </ScrollArea>
     </DndContext>
   );
