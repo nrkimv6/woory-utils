@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Group, Tabs } from '@mantine/core';
 import { eventApi, visitApi } from '@/lib/travel-plan/api';
+import {bridgeApi} from '@/lib/travel-plan/bridgeApi'
 
 import EventForm from '@/components/travel-plan/EventForm';
 import VisitForm from '@/components/travel-plan/VisitForm';
@@ -34,7 +35,7 @@ const TravelPlan = () => {
         event_id: item.id,
         lat: item.lat,
         lng: item.lng,
-        pin_idx: item.pin_idx,
+        pinIdx: item.pinIdx,
         markerText: item.markerText,
         isValid: () => {
           return obj.id && obj.lat && obj.lng
@@ -42,13 +43,28 @@ const TravelPlan = () => {
         ...item
       };
       return obj;
+    } else if(type === 'bridge') {
+      const obj = {
+        id: item.id,
+        event_id: item.tp_events?.id,
+        lat: item.tp_events?.lat,
+        lng: item.tp_events?.lng,
+        pinIdx: item.pinIdx,
+        markerText: item.markerText,
+        isValid: () => {
+          return obj.event_id && obj.lat && obj.lng
+        },
+        ...item
+      };
+      console.log(JSON.stringify(obj));
+      return obj;
     } else {
       const obj = {
         id: item.id,
         event_id: item.tp_events?.id,
         lat: item.tp_events?.lat,
         lng: item.tp_events?.lng,
-        pin_idx: item.pin_idx,
+        pinIdx: item.pinIdx,
         markerText: item.markerText,
         isValid: () => {
           return obj.event_id && obj.lat && obj.lng
@@ -92,11 +108,11 @@ const TravelPlan = () => {
       }
       setSelectedLocation(getLocationInfo(visit, 'visits'));
     };
-    return tabValue === "events" ? handleEventClick : handleVisitClick;
+    return activeTab === "events" ? handleEventClick(event) : handleVisitClick(event);
   };
 
   const handleStartEdit = (item) => {
-    return tabValue === "events" ? setEditingEvent : setEditingVisit;
+    return activeTab === "events" ? setEditingEvent(item) : setEditingVisit(item);
   };
 
   //#TODO TimeBridge 고려 필요함
@@ -207,7 +223,7 @@ const TravelPlan = () => {
   return (
     <main style={{ minHeight: '100vh' }}>
       <Group position="right" p="md">
-      {/*  참고 : 폼2개는 탭에상관없이 열릴 수 있음. */}
+        {/*  참고 : 폼2개는 탭에상관없이 열릴 수 있음. */}
         <EventForm
           onSubmit={handleEventSubmit}
           initialData={editingEvent}
@@ -239,7 +255,6 @@ const TravelPlan = () => {
               {activeTab == tabValue ?
 
                 <LocationView
-                  timelineItems={timelineManager.items}
                   onTimelineUpdate={(updatedItems) => filteredItems}
                   items={filteredItems}
                   displayType={tabValue}

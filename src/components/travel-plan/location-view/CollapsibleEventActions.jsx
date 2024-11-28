@@ -38,11 +38,11 @@ export function EventActions({ item, onEdit, onDelete, type = 'event'  }) {
       >
         삭제
       </Button>
-      { item.reservation_url && (
+      { item.reservationUrl && (
         <Button
           variant="light"
           component="a"
-          href={item.reservation_url}
+          href={item.reservationUrl}
           target="_blank"
         >
           링크

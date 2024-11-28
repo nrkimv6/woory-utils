@@ -18,14 +18,14 @@ import { formatDateForDB } from '@/util/formatter'
 export default function VisitForm({ eventId, onSubmit, initialData, onClose }) {
   const [opened, setOpened] = useState(false);
   const [formData, setFormData] = useState(initialData || {
-    event_id: eventId,
-    is_reserved: false,
-    reservation_time: null,
-    is_important: false,
-    visit_time: null,
-    visit_order: 1,
-    reservation_url: '',
-    reference_url: '',
+    eventId: eventId,
+    isReserved: false,
+    reservationTime: null,
+    isImportant: false,
+    visitTime: null,
+    visitOrder: 1,
+    reservationUrl: '',
+    referenceUrl: '',
     notes: ''
   });
   useEffect(() => {
@@ -33,8 +33,8 @@ export default function VisitForm({ eventId, onSubmit, initialData, onClose }) {
       setOpened(true);
       setFormData({
         ...initialData,
-        reservation_time: initialData.reservation_time ? new Date(initialData.reservation_time) : null,
-        visit_time: initialData.visit_time ? new Date(initialData.visit_time) : null
+        reservationTime: initialData.reservationTime ? new Date(initialData.reservationTime) : null,
+        visitTime: initialData.visitTime ? new Date(initialData.visitTime) : null
       });
     }
   }, [initialData]);
@@ -46,14 +46,14 @@ export default function VisitForm({ eventId, onSubmit, initialData, onClose }) {
   const handleClose = () => {
     setOpened(false);
     setFormData({
-      event_id: eventId,
-      is_reserved: false,
-      reservation_time: null,
-      is_important: false,
-      visit_time: null,
-      visit_order: 1,
-      reservation_url: '',
-      reference_url: '',
+      eventId: eventId,
+      isReserved: false,
+      reservationTime: null,
+      isImportant: false,
+      visitTime: null,
+      visitOrder: 1,
+      reservationUrl: '',
+      referenceUrl: '',
       notes: ''
     });
     onClose?.();
@@ -78,22 +78,22 @@ export default function VisitForm({ eventId, onSubmit, initialData, onClose }) {
               <Grid.Col span={6}>
                 <Checkbox
                   label="예약 완료"
-                  checked={formData.is_reserved}
+                  checked={formData.isReserved}
                   onChange={(event) => setFormData(prev => ({
                     ...prev,
-                    is_reserved: event.currentTarget.checked
+                    isReserved: event.currentTarget.checked
                   }))}
                 />
               </Grid.Col>
 
-              {formData.is_reserved && (
+              {formData.isReserved && (
                 <Grid.Col span={6}>
                   <DateTimePicker
                     label="예약 시간"
-                    value={formData.reservation_time ? new Date(formData.reservation_time) : null}
+                    value={formData.reservationTime ? new Date(formData.reservationTime) : null}
                     onChange={(date) => setFormData(prev => ({
                       ...prev,
-                      reservation_time: date?.toISOString() || null
+                      reservationTime: date?.toISOString() || null
                     }))}
                   />
                 </Grid.Col>
@@ -113,10 +113,10 @@ export default function VisitForm({ eventId, onSubmit, initialData, onClose }) {
               <Grid.Col span={6}>
                 <DateTimePicker
                   label="방문 예정 시간"
-                  value={formData.visit_time ? new Date(formData.visit_time) : null}
+                  value={formData.visitTime ? new Date(formData.visitTime) : null}
                   onChange={(date) => setFormData(prev => ({
                     ...prev,
-                    visit_time: date?.toISOString() || null
+                    visitTime: date?.toISOString() || null
                   }))}
                 />
               </Grid.Col>
@@ -125,10 +125,10 @@ export default function VisitForm({ eventId, onSubmit, initialData, onClose }) {
                 <NumberInput
                   label="방문 순서"
                   min={1}
-                  value={formData.visit_order}
+                  value={formData.visitOrder}
                   onChange={(value) => setFormData(prev => ({
                     ...prev,
-                    visit_order: value
+                    visitOrder: value
                   }))}
                 />
               </Grid.Col>
@@ -136,10 +136,10 @@ export default function VisitForm({ eventId, onSubmit, initialData, onClose }) {
               <Grid.Col span={6}>
                 <TextInput
                   label="예약 URL"
-                  value={formData.reservation_url}
+                  value={formData.reservationUrl}
                   onChange={(e) => setFormData(prev => ({
                     ...prev,
-                    reservation_url: e.target.value
+                    reservationUrl: e.target.value
                   }))}
                 />
               </Grid.Col>
@@ -147,10 +147,10 @@ export default function VisitForm({ eventId, onSubmit, initialData, onClose }) {
               <Grid.Col span={12}>
                 <TextInput
                   label="참고 URL"
-                  value={formData.reference_url}
+                  value={formData.referenceUrl}
                   onChange={(e) => setFormData(prev => ({
                     ...prev,
-                    reference_url: e.target.value
+                    referenceUrl: e.target.value
                   }))}
                 />
               </Grid.Col>

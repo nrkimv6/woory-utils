@@ -18,7 +18,7 @@ interface TimeBridgeProps {
   type: keyof typeof BRIDGE_TYPES;
   location?: string;
   startTime: string;
-  endTime: string;
+  // endTime: string;
   onDrop?: (id: string) => void;
 }
 
@@ -29,7 +29,7 @@ const TimeBridge: React.FC<TimeBridgeProps> = ({
   type,
   location,
   startTime,
-  endTime,
+  // endTime,
   onDrop
 }) => {
   // 드롭 영역 설정
@@ -40,6 +40,8 @@ const TimeBridge: React.FC<TimeBridgeProps> = ({
       id
     }
   });
+
+  const endTime='00:00';
 
   // 타입에 따른 아이콘 선택
   const getIcon = () => {
@@ -84,43 +86,45 @@ const TimeBridge: React.FC<TimeBridgeProps> = ({
   );
 };
 
-// 사용 예시를 위한 컨테이너 컴포넌트
-const TimelineContainer = () => {
-  const handleDragEnd = (event: { over: any; }) => {
-    const {over} = event;
-    if (over) {
-      console.log('Dropped on:', over.id);
-    }
-  };
+// // 사용 예시를 위한 컨테이너 컴포넌트
+// const TimelineContainer = () => {
+//   const handleDragEnd = (event: { over: any; }) => {
+//     const {over} = event;
+//     if (over) {
+//       console.log('Dropped on:', over.id);
+//     }
+//   };
 
-  return (
-    <DndContext 
-      modifiers={[restrictToVerticalAxis]}
-      onDragEnd={handleDragEnd}
-    >
-      <div className="w-full max-w-md mx-auto space-y-4 p-4">
-        <TimeBridge
-          id="bridge-1"
-          name="Bus to Station"
-          duration={30}
-          type="TRANSPORT"
-          location="Central Station"
-          startTime="09:00"
-          endTime="09:30"
-        />
+//   return (
+//     <DndContext 
+//       modifiers={[restrictToVerticalAxis]}
+//       onDragEnd={handleDragEnd}
+//     >
+//       <div className="w-full max-w-md mx-auto space-y-4 p-4">
+//         <TimeBridge
+//           id="bridge-1"
+//           name="Bus to Station"
+//           duration={30}
+//           type="TRANSPORT"
+//           location="Central Station"
+//           startTime="09:00"
+//           endTime="09:30"
+//         />
         
-        <TimeBridge
-          id="bridge-2"
-          name="Coffee Break"
-          duration={15}
-          type="REST"
-          location="Cafe"
-          startTime="10:00"
-          endTime="10:15"
-        />
-      </div>
-    </DndContext>
-  );
-};
+//         <TimeBridge
+//           id="bridge-2"
+//           name="Coffee Break"
+//           duration={15}
+//           type="REST"
+//           location="Cafe"
+//           startTime="10:00"
+//           endTime="10:15"
+//         />
+//       </div>
+//     </DndContext>
+//   );
+// };
 
-export default TimelineContainer;
+// export default TimelineContainer;
+
+export default TimeBridge;

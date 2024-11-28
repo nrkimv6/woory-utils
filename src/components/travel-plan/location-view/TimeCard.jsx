@@ -1,15 +1,22 @@
-
-import React, { useState,  } from 'react';
-import { Card, Text, Badge,  Group } from '@mantine/core';
+import React, { useState } from 'react';
+import { Card, Text, Badge, Group } from '@mantine/core';
+import { useDraggable } from '@dnd-kit/core';
 import CollapsibleEventActions from '@/components/travel-plan/location-view/CollapsibleEventActions';
 import LocationMarker from '@/components/travel-plan/LocationMarker';
 import { PASTEL_COLORS } from '@/util/colors';
 
-const TimeCard = ({ provided, isDragging, item, index, isSelected, onClick, onEdit, onDelete }) => {
+const TimeCard = ({ isDragging, item, index, isSelected, onClick, onEdit, onDelete }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
-// #TODO 동일한시간대 ~ TimeSlot에 겹치는 시간대의 경우 수평배치 (15px 간격)
-// 이거 DND한 뒤에도 적용이 되어야 함. 현재는 처음에만 적용되고 있음.
+  const {attributes, listeners, setNodeRef, transform} = useDraggable({
+    id: `visit-${item.id}`,
+    data: {
+      type: 'visit',
+      item
+    },
+    disabled: !isSelected // 선택된 항목만 드래그 가능
+  });
+
   const cardStyle = {
     position: 'absolute',
     left: '80px',
@@ -22,16 +29,13 @@ const TimeCard = ({ provided, isDragging, item, index, isSelected, onClick, onEd
     zIndex: isSelected ? 100 : index,
     overflow: 'visible',
     opacity: isDragging ? 0.6 : 1,
-    transform: isDragging ? 'scale(1.02)' : 'scale(1)',
-    transition: 'transform 0.2s, opacity 0.2s'
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0) scale(${isDragging ? 1.02 : 1})` : 
+                         isDragging ? 'scale(1.02)' : 'scale(1)',
+    transition: !isDragging ? 'transform 0.2s, opacity 0.2s' : undefined
   };
 
   return (
-    <div
-      ref={provided?.innerRef}
-      {...(provided.draggableProps)}
-      {...(provided.dragHandleProps)}
-    >
+    <div ref={setNodeRef} {...listeners} {...attributes}>
       <Card
         shadow="sm"
         p="sm"

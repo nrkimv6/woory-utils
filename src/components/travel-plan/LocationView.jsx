@@ -5,7 +5,6 @@ import { TimelineView } from './location-view/TimelineView';
 import { eventApi, visitApi } from '@/lib/travel-plan/api';
 
 export const LocationView = ({
-    timelineItems,
   onTimelineUpdate,
   items,
   displayType,
@@ -25,12 +24,12 @@ export const LocationView = ({
 
   const getFilteredItems = () => {
     if (!showOnlyUnscheduled) return items;
-    const filteredItems = items.filter(item => {return !item.visit_time|| item.visit_time=="00:00" });
+    const filteredItems = items.filter(item => {return !item.visitTime|| item.visitTime=="00:00" });
     return filteredItems;
   };
 
   const getTimelineItems = () => {
-    const filteredItems = items.filter(item => item.visit_time);
+    const filteredItems = items.filter(item => item.visitTime);
     return filteredItems;
   };
   return (
@@ -56,13 +55,12 @@ export const LocationView = ({
         <>
           <TimelineView
             items={getTimelineItems()}
-            onItemsChange={handleTimelineChange}
             date={date}
             selectedItem={selectedItem}
             onItemClick={onItemClick}
             onItemEdit={onItemEdit}
             onItemDelete={onItemDelete}
-            onUpdateVisit={async (id, visitData) => {
+            onItemsChange={async (id, visitData) => {
               try {
                 console.log('update visit '+id+', '+ JSON.stringify(visitData));
                 await visitApi.updateVisit(id, visitData);

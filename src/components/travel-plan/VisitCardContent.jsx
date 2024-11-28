@@ -8,10 +8,10 @@ export const VisitCardContent = ({ item, isCollapsed = false }) => {
       <Stack spacing="xs" mt="md">
         {!isCollapsed && (
           <>
-            <Text size="sm">방문예정: {formatDateTime(item.visit_time)}</Text>
+            <Text size="sm">방문예정: {formatDateTime(item.visitTime)}</Text>
             <Text size="sm">방문순서: {item.visit_order || '-'}</Text>
-            {item.is_reserved && (
-              <Text size="sm">예약시간: {formatDateTime(item.reservation_time)}</Text>
+            {item.isReserved && (
+              <Text size="sm">예약시간: {formatDateTime(item.reservationTime)}</Text>
             )}
           </>
         )}
@@ -19,7 +19,7 @@ export const VisitCardContent = ({ item, isCollapsed = false }) => {
           {item.is_important && (
             <Badge variant="filled" color="red">중요</Badge>
           )}
-          {item.is_reserved && (
+          {item.isReserved && (
             <Badge variant="filled" color="green">예약완료</Badge>
           )}
         </Group>
