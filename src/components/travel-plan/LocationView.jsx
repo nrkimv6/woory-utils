@@ -69,6 +69,8 @@ export const LocationView = ({
                 console.error('Failed to update visit:', error);
               }
             }}
+            onUpdateVisit={console.log()}
+            onUpdateBridge={console.log()}
           />
           <LocationList
             items={getFilteredItems()}

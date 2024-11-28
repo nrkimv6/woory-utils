@@ -58,8 +58,6 @@ const TimeSlot = React.memo(function TimeSlot({
   const { setNodeRef, isOver } = useDroppable({
     id: `timeslot-${time.getTime()}`
   });
-
-  // 수평 배치를 위한 아이템 위치 계산
   const getItemStyle = (index) => ({
     position: 'absolute',
     left: `${80 + (index * 15)}px`,
@@ -97,17 +95,19 @@ const TimeSlot = React.memo(function TimeSlot({
             return (
               <TimeBridge
                 key={`bridge-${item.id}`}
-                // data={item}
-                style={getItemStyle(index)}
-                id={`bridge-${item.id}`}
+                id={item.id}
                 name={item.note}
+                duration={item.duration}
                 type={item.type}
                 location={item.address}
                 startTime={item.visitTime}
-                duration={item.duration}
+                isSelected={selectedItem?.id === item.id}
                 onClick={onItemClick}
                 onEdit={onItemEdit}
                 onDelete={onItemDelete}
+                index={index}
+                total={items.length}
+                style={getItemStyle(index)}
               />
             );
           }
@@ -334,10 +334,15 @@ export const TimelineView = ({
 
     return localItems.filter(item => {
       const itemTime = new Date(item.visitTime);
+      // Bridge의 경우 duration을 고려해야 함
+      if (item.type === 'bridge') {
+        const itemEndTime = addMinutes(itemTime, item.duration || 0);
+        return itemTime <= slotEnd && itemEndTime >= time;
+      }
+      // Visit의 경우 기존 로직 유지
       return itemTime >= time && itemTime < slotEnd;
     });
   }, [localItems, zoomLevel]);
-
 
   const expandRange = useCallback((start, end) => {
     const interval = ZOOM_LEVELS[zoomLevel].interval;
