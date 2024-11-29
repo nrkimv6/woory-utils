@@ -33,11 +33,12 @@ export default function RootLayout({
 }) {
 
   if (typeof window !== 'undefined') {
-  const originalToJSON = Date.prototype.toJSON;
-  Date.prototype.toJSON = function() {
-    return this.toLocaleString('ko-KR');
+  // const originalToJSON = Date.prototype.toJSON;
+  // Date.prototype.toJSON = function() {
+  //   return this.toLocaleString('ko-KR');
+  //}
+    process.env.TZ = 'Asia/Seoul';
   };
-}
   return (
     <html lang="en">
       <body>

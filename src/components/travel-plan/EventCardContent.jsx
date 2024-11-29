@@ -1,9 +1,9 @@
 import { Card, Select, Stack, Group, Tabs, Text, Badge, Button } from '@mantine/core';
-import { format } from 'date-fns';
+import { formatDateStr } from '@/util/formatter';
 
 export const EventCardContent = ({ item, isCollapsed = false }) => {
   const formatPeriod = (start, end) => {
-    return `${format(new Date(start), 'yyyy-MM-dd')} ~ ${format(new Date(end), 'yyyy-MM-dd')}`;
+    return `${formatDateStr(start)} ~ ${formatDateStr(end)}`;
   };
 
   return (

@@ -83,7 +83,7 @@ const TimeSlot = React.memo(function TimeSlot({
   );
 });
 
-const CollapsedTimeRange = ({ time, startHour, endHour, onExpand, items, selectedItem }) => {
+const CollapsedTimeRange = ({ startHour, endHour, onExpand }) => {
   const { setNodeRef, isOver } = useDroppable({
     id: `collapsed-${startHour}-${endHour}`
   });
@@ -131,24 +131,42 @@ export const TimelineView = ({
   const [collapsedRanges, setCollapsedRanges] = useState([]);
   const [zoomLevel, setZoomLevel] = useState(1);
 
-  useEffect(() => {
-    const sortedItems = items.sort((a, b) => {
-      if (a.visitTime && b.visitTime) {
-        const timeA = new Date(a.visitTime).getTime();
-        const timeB = new Date(b.visitTime).getTime();
-        return timeA - timeB;
-      }
-      return a.visitTime ? 1 : -1;
+  // useEffect(() => {
+  //   const sortedItems = items.sort((a, b) => {
+  //     if (a.visitTime && b.visitTime) {
+  //       const timeA = new Date(a.visitTime).getTime();
+  //       const timeB = new Date(b.visitTime).getTime();
+  //       return timeA - timeB;
+  //     }
+  //     return a.visitTime ? 1 : -1;
+  //   });
+
+  //   setLocalItems(sortedItems);
+  //   setVisibleItems(localItems);
+  // }, [items]);
+
+  
+
+useEffect(() => {
+  const sortedItems = items
+    .filter(item => {
+      const itemDate = new Date(item.visitTime);
+      const baseDate = new Date(date);
+      return itemDate.toDateString() === baseDate.toDateString();
+    })
+    .sort((a, b) => {
+      const timeA = new Date(a.visitTime).getTime();
+      const timeB = new Date(b.visitTime).getTime();
+      return timeA - timeB;
     });
 
+    
     console.log("*** renderItems localItems ***");
     console.log(JSON.stringify(localItems));
     console.log("****************");
-    setLocalItems(sortedItems);
+  setLocalItems(sortedItems);
     setVisibleItems(localItems);
-  }, [items]);
-
-
+}, [items, date]);
   // useEffect(() => {
   //   setVisibleItems(localItems);
   // }, [localItems]);
@@ -451,9 +469,9 @@ export const TimelineView = ({
     const slotInterval = ZOOM_LEVELS[zoomLevel].interval;
     
     const position = (minutesSinceMidnight / slotInterval) * slotHeight;
-    console.log('calculateTopPosition:', position);
+    console.log('localMidnight:'+localMidnight+' minutesSinceMidnight'+minutesSinceMidnight);
     return position;
-    
+
   }, [zoomLevel]);
 
 
@@ -463,12 +481,12 @@ export const TimelineView = ({
 
     const height = (duration / slotInterval) * slotHeight;
 
-    console.log('calculateHeight:', {
-      duration,
-      slotHeight,
-      slotInterval,
-      calculatedHeight: height
-    });
+    // console.log('calculateHeight:', {
+    //   duration,
+    //   slotHeight,
+    //   slotInterval,
+    //   calculatedHeight: height
+    // });
 
     return height;
   }, [zoomLevel]);
@@ -566,89 +584,81 @@ export const TimelineView = ({
   //   );
   // };
 
-  const renderItems = useCallback(() => {
+const renderItems = useCallback(() => {
 
     console.log("*** renderItems localItems ***");
     console.log(JSON.stringify(localItems));
-    console.log("****************");
+    console.log("****************"); 
 
-    const itemsByTime = {};
-    localItems.forEach(item => {
-      const timeKey = new Date(item.visitTime).getTime();
-      if (!itemsByTime[timeKey]) itemsByTime[timeKey] = [];
-      itemsByTime[timeKey].push(item);
-    });
+    console.log("*** renderItems visibleItems ***");
+    console.log(JSON.stringify(visibleItems));
+    console.log("****************"); 
+     const itemsByTime = {};
+  visibleItems.forEach(item => {
+    const timeKey = new Date(item.visitTime).getTime();
+    if (!itemsByTime[timeKey]) itemsByTime[timeKey] = [];
+    itemsByTime[timeKey].push(item);
+  });
 
-    return visibleItems.map((item) => {
-      const startTime = new Date(item.visitTime);
-      const timeKey = startTime.getTime();
-      // const timeKey = new Date(item.visitTime).getTime();
-      const sameTimeItems = visibleItems.filter(i =>
-        new Date(i.visitTime).getTime() === timeKey &&
-        i.type === item.type
-      );
-      // const sameTimeItems = itemsByTime[timeKey].filter(i => i.type === item.type);
-      const itemIndex = sameTimeItems.findIndex(i => i.id === item.id);
-      const topPosition = calculateTopPosition(startTime);
-      const duration = item.duration || (item.type === 'bridge' ? 5 : 30);
-      const itemHeight = calculateHeight(duration);
-      const slotWidth = getSlotWidth(); // TimeSlot의 실제 폭
-      const isSelected = selectedItem?.id === item.id;
+  return visibleItems.map((item) => {
+    const startTime = new Date(item.visitTime);
+    const timeKey = startTime.getTime();
+    const sameTimeItems = itemsByTime[timeKey].filter(i => i.type === item.type);
+    const itemIndex = sameTimeItems.findIndex(i => i.id === item.id);
+    const topPosition = calculateTopPosition(startTime);
+    const duration = item.duration || (item.type === 'bridge' ? 5 : 30);
+    const itemHeight = calculateHeight(duration);
 
-      if (item.type === 'bridge') {
-        const itemWidth = slotWidth / Math.max(sameTimeItems.length, 1);
-        const left = 80 + (itemWidth * itemIndex);
+    const commonStyle = {
+      position: 'absolute',
+      top: topPosition,
+      height: itemHeight,
+      zIndex: selectedItem?.id === item.id ? 100 : 10
+    };
 
-        console.log("*** renderItems bridge item *** top:" + topPosition);
-        console.log(JSON.stringify(item));
-        console.log("****************");
-        return (
-          <TimeBridge
-            key={`bridge-${item.id}`}
-            {...item}
-            style={{
-              position: 'absolute',
-              top: topPosition,
-              height: itemHeight,
-              left: `${left}px`,
-              width: `${itemWidth * 0.9}px`,
-              zIndex: 10
-            }}
-            name={item.notes}
-            isSelected={selectedItem?.id === item.id}
-            onClick={onItemClick}
-            onEdit={onItemEdit}
-            onDelete={onItemDelete}
-          />
-        );
-      }
+    console.log('id:'+item.id+' type:'+item.type+' time:'+item.visitTime+' topPosition:', topPosition);
 
-      console.log("*** renderItems timecard item *** top" + topPosition);
-      console.log(JSON.stringify(item));
-      console.log("****************");
-
+    if (item.type === 'bridge') {
+      const slotWidth = document.querySelector('.timeline-slots')?.offsetWidth - 100 || 533;
+      const itemWidth = slotWidth / Math.max(sameTimeItems.length, 1);
+      
       return (
-        <TimeCard
-          key={`visit-${item.id}`}
+        <TimeBridge
+          key={`bridge-${item.id}`}
           {...item}
-          item={item}
-          index={itemIndex}
           style={{
-            position: 'absolute',
-            top: topPosition,
-            left: `${80 + (itemIndex * 15)}px`,
-            right: `${20 + ((sameTimeItems.length - itemIndex - 1) * 15)}px`,
-            zIndex: isSelected ? 100 : 2
+            ...commonStyle,
+            left: `${80 + (itemWidth * itemIndex)}px`,
+            width: `${itemWidth * 0.9}px`,
           }}
-          isDragging={false}
-          isSelected={isSelected}
+            name={item.notes}
+          isSelected={selectedItem?.id === item.id}
           onClick={onItemClick}
           onEdit={onItemEdit}
           onDelete={onItemDelete}
         />
       );
-    });
-  }, [visibleItems]);
+    }
+
+    return (
+      <TimeCard
+        key={`visit-${item.id}`}
+        item={item}
+        index={itemIndex}
+        style={{
+          ...commonStyle,
+          left: `${80 + (itemIndex * 15)}px`,
+          right: `${20 + ((sameTimeItems.length - itemIndex - 1) * 15)}px`,
+        }}
+        isDragging={false}
+        isSelected={selectedItem?.id === item.id}
+        onClick={onItemClick}
+        onEdit={onItemEdit}
+        onDelete={onItemDelete}
+      />
+    );
+  });
+}, [localItems, visibleItems, calculateTopPosition, calculateHeight, selectedItem?.id, onItemClick, onItemEdit, onItemDelete]);
 
   return (
     <DndContext onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis]}>

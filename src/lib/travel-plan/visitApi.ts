@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { format } from 'date-fns';
 import { VisitItem } from '@/components/travel-plan/types';
 import { saveToUTC, utcToLocal } from '@/util/dbfunc';
+import {fromDBTime} from '@/util/formatter'
 
 const VISIT_TABLE = 'tp_visits';
 const EVENTS_FIELDS = `
@@ -43,13 +44,13 @@ export const transformVisitFromDB = (dbVisit: any): VisitItem => ({
   id: dbVisit.id,
   type: 'visit',
   eventId: dbVisit.event_id,
-  // visitTime: utcToLocal(dbVisit.visit_time).toISOString(),
-  // reservationTime: dbVisit.reservation_time ? utcToLocal(dbVisit.reservation_time).toISOString() : undefined,
-  visitTime: dbVisit.visit_time,
+  visitTime: fromDBTime(dbVisit.visit_time),
+  // visitTime: dbVisit.visit_time,
   visitOrder: dbVisit.visit_order,
   isReserved: dbVisit.is_reserved,
   isImportant: dbVisit.is_important,
-  reservationTime: dbVisit.reservation_time,
+  reservationTime: dbVisit.reservation_time ? fromDBTime(dbVisit.reservation_time) : undefined,
+  // reservationTime: dbVisit.reservation_time,
   reservationUrl: dbVisit.reservation_url,
   referenceUrl: dbVisit.reference_url,
   notes: dbVisit.notes,

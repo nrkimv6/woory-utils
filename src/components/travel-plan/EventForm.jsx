@@ -222,7 +222,7 @@ export default function EventForm({ onSubmit, initialData, onClose }) {
                     value={new Date(formData.start_date)}
                     onChange={(date) => setFormData(prev => ({
                       ...prev,
-                      start_date: format(date, 'yyyy-MM-dd')
+                      start_date: formatDateStr(date)
                     }))}
                     valueFormat="YYYY-MM-DD"
                   />
@@ -233,7 +233,7 @@ export default function EventForm({ onSubmit, initialData, onClose }) {
                     value={new Date(formData.end_date)}
                     onChange={(date) => setFormData(prev => ({
                       ...prev,
-                      end_date: format(date, 'yyyy-MM-dd')
+                      end_date: formatDateStr(date)
                     }))}
                     valueFormat="YYYY-MM-DD"
                   />

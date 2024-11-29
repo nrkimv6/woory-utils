@@ -1,6 +1,6 @@
 // hooks/useLocationFilter.js
 import { useState, useMemo } from 'react';
-import { format, parseISO } from 'date-fns';
+import { formatDateStr } from '@/util/formatter';
 
 const generateMarkerText = (index, type) => {
   return type === 'events' 
@@ -8,13 +8,14 @@ const generateMarkerText = (index, type) => {
     : (index + 1).toString();
 };
 export const filterByDate = (items, date, activeTab) => {
-  const dateStr = format(date, 'yyyy-MM-dd');
+  const dateStr = formatDateStr(date);
   return items.filter(item => {
     if (activeTab === "events") {
       return item.start_date <= dateStr && dateStr <= item.end_date;
     } else {
+      console.log('visit time:'+item.visitTime );
       const visitDate = item.visitTime ? 
-        format(parseISO(item.visitTime), 'yyyy-MM-dd') : 
+        formatDateStr(item.visitTime) : 
         null;
       return visitDate === dateStr;
     }
