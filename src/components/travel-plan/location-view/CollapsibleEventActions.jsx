@@ -59,9 +59,10 @@ const actionStyle = {
   right: 0,
   top: '100%',
   zIndex: 1000,
-  backgroundColor: 'white',
+  backgroundColor: 'blue',
   boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-  borderRadius: '4px'
+  borderRadius: '4px',
+  color:'white'
 };
   return  (
   <>

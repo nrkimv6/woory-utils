@@ -65,11 +65,11 @@ export const LocationView = ({
             onItemsChange={async (id, type, updateField) => {
               try {
                 if(type=="visit"){
-                  console.log('update visit '+id+', '+ JSON.stringify(visitData));
-                  await visitApi.updateVisit(id, visitData);
+                  console.log('update visit '+id+', '+ JSON.stringify(updateField));
+                  await visitApi.updateVisit(id, updateField);
                 }
                 else if(type=="bridge"){
-                  console.log('update bridge '+id+', '+ JSON.stringify(visitData));
+                  console.log('update bridge '+id+', '+ JSON.stringify(updateField));
                   await bridgeApi.updateBridge(id, updateField);
                 }
                 else{

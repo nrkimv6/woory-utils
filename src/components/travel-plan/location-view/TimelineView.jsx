@@ -1,13 +1,24 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Card, Text, Badge, ScrollArea, Stack, Group } from '@mantine/core';
 import { format, addMinutes, differenceInMinutes } from 'date-fns';
-import { DndContext } from '@dnd-kit/core';
-import { useDroppable } from '@dnd-kit/core';
+
+import {
+  DndContext,
+  MeasuringStrategy,
+  PointerSensor,
+  MouseSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  DragOverlay,
+  closestCenter
+} from '@dnd-kit/core';
+
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import TimeCard from './TimeCard';
 import TimeBridge from './TimeBridge';
 import { cleanReactStructure } from '@/util/jsfunc'
-import {CollapsedRangeState, TimeSlot, CollapsedTimeRange} from './TimeSlot'
+import { CollapsedRangeState, TimeSlot, CollapsedTimeRange } from './TimeSlot'
 import { ZOOM_LEVELS } from '../types';
 
 export const TimelineView = ({
@@ -24,7 +35,55 @@ export const TimelineView = ({
   const [collapsedRanges, setCollapsedRanges] = useState([]);
   const [rangeStates, setRangeStates] = useState({}); // 각 범위의 상태를 추적
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [active, setActive] = useState({});
 
+  const mouseSensor = useSensor(MouseSensor);  // 제약 조건 제거
+  const touchSensor = useSensor(TouchSensor);  // 제약 조건 제거
+
+  const sensors = useSensors(mouseSensor, touchSensor);
+  const handleDragOver = (event) => {
+    // console.log('DragOver Raw Event:', event);
+    const { active, over } = event;
+
+    if (!over) {
+      console.log('No over target');
+      return;
+    }
+
+    // console.log('DragOver Details:', {
+    //   activeId: active?.id,
+    //   activeData: active?.data?.current,
+    //   overId: over?.id,
+    //   overData: over?.data?.current
+    // });
+
+    setActive(active);
+
+    if (over.id.startsWith('collapsed-')) {
+      console.log('Over collapsed range detected');
+      const [, start, end] = over.id.split('-').map(Number);
+
+      // 이전 타이머 취소
+      if (dragOverTimer) {
+        clearTimeout(dragOverTimer);
+      }
+
+      // 새로운 범위가 활성화되면 이전 타이머 취소하고 새로 시작
+      if (activeRange?.start !== start || activeRange?.end !== end) {
+        console.log('Setting new active range:', { start, end });
+        setActiveRange({ start, end });
+        const timer = setTimeout(() => {
+          console.log('Expanding range after timeout');
+          handleRangeExpand(start, end);
+          setDragOverTimer(null);
+          setActiveRange(null);
+        }, 1000);
+        setDragOverTimer(timer);
+      }
+    } else {
+      console.log('Not over collapsed range:', over.id);
+    }
+  };
   useEffect(() => {
     const sortedItems = items
       .filter(item => {
@@ -58,7 +117,7 @@ export const TimelineView = ({
     return 40; // CollapsedRange의 고정 높이
   }, []);
 
-  
+
   const [isDragging, setIsDragging] = useState(false);
   const [dragOverTimer, setDragOverTimer] = useState(null);
   const [activeRange, setActiveRange] = useState(null);
@@ -67,45 +126,48 @@ export const TimelineView = ({
     setIsDragging(true);
   };
 
-  const handleDragOver = (event) => {
-    const { active, over } = event;
-    if (!over) return;
+  // const handleDragOver = ({ active, over }) => {
+  //   console.log('DragOver Event:', { 
+  //     activeId: active?.id,
+  //     overId: over?.id,
+  //     overData: over?.data?.current
+  //   });
+  //   const overId = over?.id;
+  //   if (!overId) return;
 
-    // CollapsedRange 위에서 드래그 중일 때
-    if (over.id.startsWith('collapsed-')) {
-      const [, start, end] = over.id.split('-').map(Number);
-      
-      // 이전 타이머 취소
-      if (dragOverTimer) {
-        clearTimeout(dragOverTimer);
-      }
+  //   // CollapsedRange 위에서 드래그 중일 때
+  //   if (typeof overId === 'string' && overId.startsWith('collapsed-')) {
+  //     console.log('Over collapsed range:', overId);
 
-      // 새로운 범위가 활성화되면 이전 타이머 취소하고 새로 시작
-      if (activeRange?.start !== start || activeRange?.end !== end) {
-        setActiveRange({ start, end });
-        const timer = setTimeout(() => {
-          handleRangeExpand(start, end);
-          setDragOverTimer(null);
-          setActiveRange(null);
-        }, 1000);
-        setDragOverTimer(timer);
-      }
-    } else {
-      // CollapsedRange를 벗어나면 타이머 취소
-      if (dragOverTimer) {
-        clearTimeout(dragOverTimer);
-        setDragOverTimer(null);
-      }
-      setActiveRange(null);
-    }
-  };
+  //     const [, startStr, endStr] = overId.split('-');
+  //     const start = parseInt(startStr);
+  //     const end = parseInt(endStr);
+
+  //     // 이전 타이머 취소
+  //     if (dragOverTimer) {
+  //       clearTimeout(dragOverTimer);
+  //     }
+
+  //     // 새로운 범위가 활성화되면 이전 타이머 취소하고 새로 시작
+  //     if (activeRange?.start !== start || activeRange?.end !== end) {
+  //       setActiveRange({ start, end });
+  //       const timer = setTimeout(() => {
+  //         handleRangeExpand(start, end);
+  //         setDragOverTimer(null);
+  //         setActiveRange(null);
+  //       }, 1000);
+  //       setDragOverTimer(timer);
+  //     }
+  //   }
+  // };
 
   const handleDragEnd = async (event) => {
     const { active, over } = event;
     setIsDragging(false);
-    
+
     // 드래그 종료 시 남아있는 타이머 정리
     if (dragOverTimer) {
+      console.log("clear dragtime...");
       clearTimeout(dragOverTimer);
       setDragOverTimer(null);
     }
@@ -113,11 +175,12 @@ export const TimelineView = ({
 
     if (!over) return;
 
-    const itemId = active.id;
+    const itemId = active.data.current?.id || active.data.current?.item?.id;
     const itemType = active.data.current?.type;
     const newTime = parseInt(over.id.split('-')[1]);
-    
+
     try {
+      console.log("onItemsChange");
       await onItemsChange(itemId, itemType, { visitTime: new Date(newTime).toISOString() });
     } catch (error) {
       console.error('Failed to update timeline item:', error);
@@ -395,7 +458,7 @@ export const TimelineView = ({
   }, [zoomLevel]);
 
   const getSlotWidth = useCallback(() => {
-    const timeSlot = document.querySelector('.time-slot');
+    const timeSlot = document.querySelector('.timeline-slots');
     return timeSlot?.offsetWidth || 0;
   }, []);
 
@@ -424,7 +487,7 @@ export const TimelineView = ({
       };
 
       if (item.type === 'bridge') {
-        const slotWidth = document.querySelector('.timeline-slots')?.offsetWidth - 100 || 0;
+        const slotWidth = getSlotWidth();
         const itemWidth = slotWidth / Math.max(sameTimeItems.length, 1);
 
         return (
@@ -434,7 +497,7 @@ export const TimelineView = ({
             style={{
               ...commonStyle,
               left: `${80 + (itemWidth * itemIndex)}px`,
-              width: `${itemWidth * 0.9}px`,
+              width: `${itemWidth * 0.7}px`,
             }}
             name={item.notes}
             isSelected={selectedItem?.id === item.id}
@@ -465,21 +528,40 @@ export const TimelineView = ({
     });
   }, [visibleItems, selectedItem?.id, calculateTopPosition, calculateHeight]);
 
-return (
-    <DndContext 
+
+  return (
+    <DndContext
+      sensors={sensors}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
       modifiers={[restrictToVerticalAxis]}
+      measuring={{
+        droppable: {
+          strategy: MeasuringStrategy.Always,
+        },
+      }}
+      // collision detection 알고리즘 설정 추가
+      collisionDetection={closestCenter}
+
     >
       <ScrollArea style={{ height: 'calc(100vh - 200px)' }}>
         <div className="relative timeline-slots">
-          {renderTimeSlots()}
-          {renderItems()}
+          <div className="absolute inset-0" style={{ zIndex: 1, pointerEvents: 'auto' }}>
+            {renderTimeSlots()}
+          </div>
+          <div className="absolute inset-0" style={{ zIndex: 2 }}>
+            {renderItems()}
+          </div>
         </div>
-      </ScrollArea>
+      </ScrollArea> <DragOverlay>
+        {active && (
+          <div style={{ opacity: 0.5 }}>
+            {active.id}
+          </div>
+        )}
+      </DragOverlay>
     </DndContext>
   );
-
 };

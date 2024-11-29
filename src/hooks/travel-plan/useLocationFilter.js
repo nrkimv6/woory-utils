@@ -13,7 +13,7 @@ export const filterByDate = (items, date, activeTab) => {
     if (activeTab === "events") {
       return item.start_date <= dateStr && dateStr <= item.end_date;
     } else {
-      console.log('visit time:'+item.visitTime );
+      // console.log('visit time:'+item.visitTime );
       const visitDate = item.visitTime ? 
         formatDateStr(item.visitTime) : 
         null;
