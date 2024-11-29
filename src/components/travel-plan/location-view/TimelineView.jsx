@@ -41,8 +41,9 @@ export const TimelineView = ({
   const touchSensor = useSensor(TouchSensor);  // 제약 조건 제거
 
   const sensors = useSensors(mouseSensor, touchSensor);
+
   const handleDragOver = (event) => {
-    // console.log('DragOver Raw Event:', event);
+    console.log('DragOver Raw Event:', event);
     const { active, over } = event;
 
     if (!over) {
@@ -50,12 +51,12 @@ export const TimelineView = ({
       return;
     }
 
-    // console.log('DragOver Details:', {
-    //   activeId: active?.id,
-    //   activeData: active?.data?.current,
-    //   overId: over?.id,
-    //   overData: over?.data?.current
-    // });
+    console.log('DragOver Details:', {
+      activeId: active?.id,
+      activeData: active?.data?.current,
+      overId: over?.id,
+      overData: over?.data?.current
+    });
 
     setActive(active);
 

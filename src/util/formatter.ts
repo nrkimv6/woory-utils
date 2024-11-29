@@ -11,6 +11,27 @@ export const formatDateTime = (dateStr: string) => {
   }
 };
 
+export const formatTime = (dateStr: string) => {
+  if (!dateStr) return '-';
+  try {
+    return format(new Date(dateStr),
+      'HH:mm');
+  } catch (e) {
+    return '-';
+  }
+};
+
+
+export const formatStringToTime = (dateStr: string) => {
+  if (!dateStr) return '-';
+  try {
+    return format(new Date(`2000-01-01T${dateStr}`),
+      'HH:mm');
+  } catch (e) {
+    return '-';
+  }
+};
+
 export const formatDateForDB = (date: Date | string) => {
   if (!date) return null;
   return format(new Date(date), "yyyy-MM-dd'T'HH:mm:ssXXX");

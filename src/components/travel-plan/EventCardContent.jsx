@@ -1,5 +1,5 @@
 import { Card, Select, Stack, Group, Tabs, Text, Badge, Button } from '@mantine/core';
-import { formatDateStr } from '@/util/formatter';
+import { formatDateStr, formatStringToTime, formatTime } from '@/util/formatter';
 
 export const EventCardContent = ({ item, isCollapsed = false }) => {
   const formatPeriod = (start, end) => {
@@ -15,8 +15,8 @@ export const EventCardContent = ({ item, isCollapsed = false }) => {
         {!isCollapsed && (
           <>
             <Text size="sm">
-              영업시간: {format(new Date(`2000-01-01T${item.open_time}`), 'HH:mm')} ~ 
-              {format(new Date(`2000-01-01T${item.close_time}`), 'HH:mm')}
+              영업시간: {formatStringToTime(item.open_time) } ~ 
+              {formatStringToTime(item.close_time)}
             </Text>
             <Text size="sm">주소: {item.address}</Text>
             <Text size="sm">
