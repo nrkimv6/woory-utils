@@ -2,12 +2,6 @@ import React from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { Bus, Coffee, Clock } from 'lucide-react';
 import { addMinutes, differenceInMinutes } from 'date-fns';
-const BRIDGE_TYPES = {
-  TRANSPORT: 'TRANSPORT',
-  REST: 'REST',
-  GENERIC: 'GENERIC'
-};
-
 const TimeBridge = ({
   id,
   name,
@@ -21,17 +15,17 @@ const TimeBridge = ({
   total = 1,
   slotHeight,
   slotInterval,
-  style, 
+  style,
 }) => {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: `bridge-${id}`,
     data: {
       type: 'bridge',
       id
-    }
+    },
+    disabled: !isSelected // 선택된 상태에서만 드래그 가능
   });
 
-  // 타입에 따른 아이콘 선택
   const getIcon = () => {
     switch (type) {
       case 'TRANSPORT':
@@ -43,24 +37,22 @@ const TimeBridge = ({
     }
   };
 
-  // Calculate position and height based on time
-  const start = new Date(startTime);
-  const end = addMinutes(start, duration);
-  const heightInSlots = Math.ceil(duration / slotInterval);
-  const heightInPixels = heightInSlots * slotHeight;
-
-  // Calculate horizontal position based on index and total bridges
-  const horizontalGap = 100 / (total + 1);
-  const leftPosition = `${horizontalGap * (index + 1)}%`;
-
   return (
-    <div ref={setNodeRef} {...listeners} {...attributes}>
-      <div style={{
-        ...style,
-        backgroundColor: 'transparent'
-      }}>
-        <div className="absolute h-full border-l border-dashed border-gray-300" style={{ left: '50%' }} />
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-3 py-2 shadow-sm rounded">
+    <div ref={setNodeRef} {...(isSelected ? { ...listeners, ...attributes } : {})}>
+      <div 
+        style={{
+          ...style,
+          backgroundColor: 'transparent',
+          cursor: isSelected ? 'grab' : 'pointer' // 선택된 상태에서만 grab 커서
+        }}
+        onClick={(e) => {
+          e.stopPropagation();
+          onClick && onClick({ id, type: 'bridge', name, duration });
+        }}
+      >
+        <div className={`absolute h-full border-l border-dashed ${isSelected ? 'border-blue-500' : 'border-gray-300'}`} 
+             style={{ left: '50%' }} />
+        <div className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 ${isSelected ? 'bg-blue-50' : 'bg-white'} px-3 py-2 shadow-sm rounded ${isSelected ? 'ring-2 ring-blue-500' : ''}`}>
           <div className="flex items-center gap-2">
             {getIcon()}
             <div>

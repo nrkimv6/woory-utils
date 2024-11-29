@@ -7,129 +7,8 @@ import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import TimeCard from './TimeCard';
 import TimeBridge from './TimeBridge';
 import { cleanReactStructure } from '@/util/jsfunc'
-
-const ZOOM_LEVELS = {
-  1: { interval: 60, height: 80 },
-  2: { interval: 30, height: 60 },
-  3: { interval: 15, height: 40 },
-  4: { interval: 10, height: 30 }
-};
-
-// CollapsedRange 상태를 추적하기 위한 새로운 인터페이스
-const CollapsedRangeState = {
-  COLLAPSED: 'collapsed',
-  EXPANDED: 'expanded',
-  USER_EXPANDED: 'user-expanded' // 사용자가 명시적으로 확장한 상태
-};
-
-const TimeSlot = React.memo(function TimeSlot({
-  time, 
-  zoomLevel,
-  isCollapsed,
-  onToggleCollapse,
-}) {
-  
-  const [dragOverTimer, setDragOverTimer] = useState(null);
-  const formattedTime = format(time, 'HH:mm');
-
-  const handleDragOver = useCallback((e) => {
-    if (!dragOverTimer && isCollapsed) {
-      const timer = setTimeout(() => {
-        onToggleCollapse(time.getHours());
-      }, 1000);
-      setDragOverTimer(timer);
-    }
-  }, [dragOverTimer, isCollapsed, onToggleCollapse, time]);
-
-  const handleDragLeave = useCallback(() => {
-    if (dragOverTimer) {
-      clearTimeout(dragOverTimer);
-      setDragOverTimer(null);
-    }
-  }, [dragOverTimer]);
-
-  useEffect(() => {
-    return () => {
-      if (dragOverTimer) {
-        clearTimeout(dragOverTimer);
-      }
-    };
-  }, [dragOverTimer]);
-
-  const { setNodeRef, isOver } = useDroppable({
-    id: `timeslot-${time.getTime()}`
-  });
-  
-
-  return (
-    <div
-      ref={setNodeRef}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onClick={() => onToggleCollapse(time.getHours())}
-      className={`
-        relative
-        ${isOver ? 'bg-blue-50' : ''}
-        transition-all duration-200
-      `}
-      style={{
-        height: isCollapsed ? '30px' : ZOOM_LEVELS[zoomLevel].height,
-        borderBottom: '1px dashed #ddd',
-        cursor: 'pointer',
-        zIndex: 1 
-      }}
-    >
-      <Group position="apart" spacing="xs" className="absolute left-0 top-0 w-[70px]">
-        <Text size="sm" weight={500} color="dimmed">
-          {formattedTime}
-        </Text>
-      </Group>
-      <div className="relative ml-[80px] h-full">
-        <div className="absolute left-0 right-0 top-1/2 border-t border-dashed border-gray-200" />
-      </div>
-    </div>
-  );
-});
-
-const CollapsedTimeRange = ({ startHour, endHour, onExpand, rangeState }) => {
-  const { setNodeRef, isOver } = useDroppable({
-    id: `collapsed-${startHour}-${endHour}`
-  });
-
-  // USER_EXPANDED 상태일 때는 렌더링하지 않음
-  if (rangeState === CollapsedRangeState.USER_EXPANDED) {
-    return null;
-  }
-
-  return (
-    <div
-      ref={setNodeRef}
-      onClick={onExpand}
-      style={{
-        height: '40px',
-        margin: '0px 0',
-        borderBottom: '1px dashed #ddd',
-        backgroundColor: isOver ? '#e9ecef' : '#f8f9fa',
-        display: 'flex',
-        alignItems: 'center',
-        cursor: 'pointer',
-        padding: '0 10px',
-        transition: 'all 0.2s ease',
-        transform: isOver ? 'scale(1.01)' : 'scale(1)',
-      }}
-    >
-      <Group position="apart" style={{ width: '100%' }}>
-        <Text size="sm" color="dimmed">
-          {`${String(startHour).padStart(2, '0')}:00`}
-        </Text>
-        <Text size="sm" color="dimmed">...</Text>
-        <Text size="sm" color="dimmed">
-          {`${String(endHour).padStart(2, '0')}:00`}
-        </Text>
-              </Group>
-    </div>
-  );
-};
+import {CollapsedRangeState, TimeSlot, CollapsedTimeRange} from './TimeSlot'
+import { ZOOM_LEVELS } from '../types';
 
 export const TimelineView = ({
   items,
@@ -173,20 +52,71 @@ export const TimelineView = ({
       [`${start}-${end}`]: state
     }));
   }, []);
+
+
+  const getCollapsedRangeHeight = useCallback((start, end) => {
+    return 40; // CollapsedRange의 고정 높이
+  }, []);
+
   
-  
-  const handleDragEnd = async (event) => {
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOverTimer, setDragOverTimer] = useState(null);
+  const [activeRange, setActiveRange] = useState(null);
+
+  const handleDragStart = () => {
+    setIsDragging(true);
+  };
+
+  const handleDragOver = (event) => {
     const { active, over } = event;
     if (!over) return;
-    if (!selectedItem) {
-      console.log("not selected!");
-      return;
+
+    // CollapsedRange 위에서 드래그 중일 때
+    if (over.id.startsWith('collapsed-')) {
+      const [, start, end] = over.id.split('-').map(Number);
+      
+      // 이전 타이머 취소
+      if (dragOverTimer) {
+        clearTimeout(dragOverTimer);
+      }
+
+      // 새로운 범위가 활성화되면 이전 타이머 취소하고 새로 시작
+      if (activeRange?.start !== start || activeRange?.end !== end) {
+        setActiveRange({ start, end });
+        const timer = setTimeout(() => {
+          handleRangeExpand(start, end);
+          setDragOverTimer(null);
+          setActiveRange(null);
+        }, 1000);
+        setDragOverTimer(timer);
+      }
+    } else {
+      // CollapsedRange를 벗어나면 타이머 취소
+      if (dragOverTimer) {
+        clearTimeout(dragOverTimer);
+        setDragOverTimer(null);
+      }
+      setActiveRange(null);
     }
+  };
+
+  const handleDragEnd = async (event) => {
+    const { active, over } = event;
+    setIsDragging(false);
+    
+    // 드래그 종료 시 남아있는 타이머 정리
+    if (dragOverTimer) {
+      clearTimeout(dragOverTimer);
+      setDragOverTimer(null);
+    }
+    setActiveRange(null);
+
+    if (!over) return;
 
     const itemId = active.id;
     const itemType = active.data.current?.type;
     const newTime = parseInt(over.id.split('-')[1]);
-
+    
     try {
       await onItemsChange(itemId, itemType, { visitTime: new Date(newTime).toISOString() });
     } catch (error) {
@@ -194,9 +124,15 @@ export const TimelineView = ({
     }
   };
 
-  const getCollapsedRangeHeight = useCallback((start, end) => {
-    return 40; // CollapsedRange의 고정 높이
-  }, []);
+  const handleDragCancel = () => {
+    setIsDragging(false);
+    if (dragOverTimer) {
+      clearTimeout(dragOverTimer);
+      setDragOverTimer(null);
+    }
+    setActiveRange(null);
+  };
+
 
   // 특정 시간 이전의 CollapsedRange들의 총 높이를 계산
   const getPrecedingCollapsedHeight = useCallback((targetTime) => {
@@ -231,12 +167,12 @@ export const TimelineView = ({
       if (existingRangeIndex !== -1) {
         const [start, end] = prev[existingRangeIndex];
         const rangeKey = `${start}-${end}`;
-        
+
         // 사용자가 명시적으로 확장한 범위는 제거하지 않음
         if (updatedRangeStates[rangeKey] === CollapsedRangeState.USER_EXPANDED) {
           return newRanges;
         }
-        
+
         // 범위 제거
         newRanges = newRanges.filter((_, index) => index !== existingRangeIndex);
         updatedRangeStates[rangeKey] = CollapsedRangeState.EXPANDED;
@@ -276,9 +212,9 @@ export const TimelineView = ({
         const itemHour = new Date(item.visitTime).getHours();
         return !newRanges.some(([start, end]) => {
           const rangeKey = `${start}-${end}`;
-          return itemHour >= start && 
-                 itemHour <= end && 
-                 updatedRangeStates[rangeKey] !== CollapsedRangeState.USER_EXPANDED;
+          return itemHour >= start &&
+            itemHour <= end &&
+            updatedRangeStates[rangeKey] !== CollapsedRangeState.USER_EXPANDED;
         });
       });
 
@@ -292,15 +228,15 @@ export const TimelineView = ({
   const handleRangeExpand = useCallback((start, end) => {
     // 범위를 USER_EXPANDED 상태로 변경
     updateRangeState(start, end, CollapsedRangeState.USER_EXPANDED);
-    
+
     // visibleItems 업데이트
     const updatedVisibleItems = localItems.filter(item => {
       const itemHour = new Date(item.visitTime).getHours();
       return !collapsedRanges.some(([rStart, rEnd]) => {
         const rangeKey = `${rStart}-${rEnd}`;
-        return itemHour >= rStart && 
-               itemHour <= rEnd && 
-               rangeStates[rangeKey] !== CollapsedRangeState.USER_EXPANDED;
+        return itemHour >= rStart &&
+          itemHour <= rEnd &&
+          rangeStates[rangeKey] !== CollapsedRangeState.USER_EXPANDED;
       });
     });
 
@@ -430,10 +366,10 @@ export const TimelineView = ({
     const minutesSinceMidnight = differenceInMinutes(localStartTime, localMidnight);
     const slotHeight = ZOOM_LEVELS[zoomLevel].height;
     const slotInterval = ZOOM_LEVELS[zoomLevel].interval;
-    
+
     // 기본 위치 계산
     let position = (minutesSinceMidnight / slotInterval) * slotHeight;
-    
+
     // CollapsedRange에 의한 위치 조정
     const collapsedHeight = getPrecedingCollapsedHeight(startTime);
     position -= collapsedHeight;
@@ -462,7 +398,7 @@ export const TimelineView = ({
     const timeSlot = document.querySelector('.time-slot');
     return timeSlot?.offsetWidth || 0;
   }, []);
-  
+
   const renderItems = useCallback(() => {
     const itemsByTime = {};
     visibleItems.forEach(item => {
@@ -490,7 +426,7 @@ export const TimelineView = ({
       if (item.type === 'bridge') {
         const slotWidth = document.querySelector('.timeline-slots')?.offsetWidth - 100 || 0;
         const itemWidth = slotWidth / Math.max(sameTimeItems.length, 1);
-        
+
         return (
           <TimeBridge
             key={`bridge-${item.id}`}
@@ -529,9 +465,14 @@ export const TimelineView = ({
     });
   }, [visibleItems, selectedItem?.id, calculateTopPosition, calculateHeight]);
 
-
-  return (
-    <DndContext onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis]}>
+return (
+    <DndContext 
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
+      modifiers={[restrictToVerticalAxis]}
+    >
       <ScrollArea style={{ height: 'calc(100vh - 200px)' }}>
         <div className="relative timeline-slots">
           {renderTimeSlots()}
@@ -540,4 +481,5 @@ export const TimelineView = ({
       </ScrollArea>
     </DndContext>
   );
+
 };

@@ -55,3 +55,11 @@ export interface BridgeCreate extends Omit<BridgeItem, 'id' | 'created_at'> {
 }
 
 export interface BridgeUpdate extends Partial<BridgeCreate> {}
+
+
+export const ZOOM_LEVELS = {
+  1: { interval: 60, height: 80 },
+  2: { interval: 30, height: 60 },
+  3: { interval: 15, height: 40 },
+  4: { interval: 10, height: 30 }
+};

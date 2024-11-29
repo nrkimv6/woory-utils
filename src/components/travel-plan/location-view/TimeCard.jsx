@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, Text, Badge, Group } from '@mantine/core';
 import { useDraggable } from '@dnd-kit/core';
@@ -8,38 +9,38 @@ import { PASTEL_COLORS } from '@/util/colors';
 const TimeCard = ({ isDragging, item, index, isSelected, onClick, onEdit, onDelete, style }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const {attributes, listeners, setNodeRef, transform} = useDraggable({
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: `visit-${item.id}`,
     data: {
       type: 'visit',
       item
     },
-    disabled: !isSelected // 선택된 항목만 드래그 가능
+    disabled: !isSelected // 선택된 상태에서만 드래그 가능
   });
 
-const cardStyle = {
-  ...style,
-  borderLeft: '4px solid #228be6',
-  backgroundColor: isSelected ? '#f0f7ff' : 'white',
-  border: isSelected ? '2px solid #228be6' : '1px solid #dee2e6',
-  cursor: 'pointer',
-  // zIndex: style.zIndex,
-  opacity: isDragging ? 0.6 : 1,
-  transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
-  transition: !isDragging ? 'transform 0.2s, opacity 0.2s' : undefined,
-  // position: 'absolute',
-  overflow: 'visible'
-};
-
+  const cardStyle = {
+    ...style,
+    borderLeft: '4px solid #228be6',
+    backgroundColor: isSelected ? '#f0f7ff' : 'white',
+    border: isSelected ? '2px solid #228be6' : '1px solid #dee2e6',
+    cursor: isSelected ? 'grab' : 'pointer', // 선택된 상태에서만 grab 커서
+    opacity: isDragging ? 0.6 : 1,
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    transition: !isDragging ? 'transform 0.2s, opacity 0.2s' : undefined,
+    overflow: 'visible'
+  };
 
   return (
-    <div ref={setNodeRef} {...listeners} {...attributes}>
+    <div ref={setNodeRef} {...(isSelected ? { ...listeners, ...attributes } : {})}>
       <Card
         shadow="sm"
         p="sm"
         pl="xl"
         withBorder
-        onClick={() => onClick(item)}
+        onClick={(e) => {
+          e.stopPropagation();
+          onClick(item);
+        }}
         style={cardStyle}
       >
         <div style={{
