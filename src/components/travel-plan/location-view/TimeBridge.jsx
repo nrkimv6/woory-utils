@@ -6,23 +6,24 @@ const BRIDGE_TYPES = {
   TRANSPORT: 'TRANSPORT',
   REST: 'REST',
   GENERIC: 'GENERIC'
-} ;
+};
 
-const TimeBridge = ({ 
-  id, 
-  name, 
-  duration, 
-  type, 
-  location, 
+const TimeBridge = ({
+  id,
+  name,
+  duration,
+  type,
+  location,
   startTime,
   isSelected,
   onClick,
   index = 0,
   total = 1,
   slotHeight,
-  slotInterval
+  slotInterval,
+  style, 
 }) => {
-  const {attributes, listeners, setNodeRef, transform} = useDraggable({
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: `bridge-${id}`,
     data: {
       type: 'bridge',
@@ -53,51 +54,23 @@ const TimeBridge = ({
   const leftPosition = `${horizontalGap * (index + 1)}%`;
 
   return (
-    <div
-      ref={setNodeRef}
-      {...listeners}
-      {...attributes}
-      className="absolute left-[80px] right-[20px]"
-      style={{
-        height: `${heightInPixels}px`,
-        transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined
-      }}
-      onClick={(e) => {
-        e.stopPropagation();
-        onClick?.({ id, type: 'bridge' });
-      }}
-    >
-      {/* Vertical dashed line */}
-      <div 
-        className="absolute top-0 bottom-0 w-px border-l border-dashed border-gray-300"
-        style={{ left: leftPosition }}
-      />
-      
-      {/* Content card */}
-      <div 
-        className={`
-          absolute p-2 -translate-x-1/2 bg-white rounded-sm shadow-sm
-          ${isSelected ? 'ring-2 ring-blue-400' : ''}
-        `}
-        style={{ 
-          left: leftPosition,
-          top: '50%',
-          transform: 'translateY(-50%)'
-        }}
-      >
-        <div className="flex items-center gap-2">
-          {getIcon()}
-          <div>
-            <div className="text-sm font-medium">{name}</div>
-            <div className="text-xs text-gray-500">{duration}분</div>
-            {location && (
-              <div className="text-xs text-gray-500">{location}</div>
-            )}
+    <div ref={setNodeRef} {...listeners} {...attributes}>
+      <div style={{
+        ...style,
+        backgroundColor: 'transparent'
+      }}>
+        <div className="absolute h-full border-l border-dashed border-gray-300" style={{ left: '50%' }} />
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-3 py-2 shadow-sm rounded">
+          <div className="flex items-center gap-2">
+            {getIcon()}
+            <div>
+              <div className="text-sm font-medium">{name}</div>
+              <div className="text-xs text-gray-500">{duration}분</div>
+            </div>
           </div>
         </div>
       </div>
     </div>
   );
 };
-
 export default TimeBridge;

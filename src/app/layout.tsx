@@ -31,6 +31,13 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+
+  if (typeof window !== 'undefined') {
+  const originalToJSON = Date.prototype.toJSON;
+  Date.prototype.toJSON = function() {
+    return this.toLocaleString('ko-KR');
+  };
+}
   return (
     <html lang="en">
       <body>

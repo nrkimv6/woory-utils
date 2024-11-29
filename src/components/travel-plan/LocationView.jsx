@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { Stack, Group, Checkbox } from '@mantine/core';
 import { LocationList } from './location-view/LocationList';
 import { TimelineView } from './location-view/TimelineView';
-import { eventApi, visitApi } from '@/lib/travel-plan/api';
+import { eventApi } from '@/lib/travel-plan/api';
+import {bridgeApi} from '@/lib/travel-plan/bridgeApi'
+import {visitApi} from '@/lib/travel-plan/visitApi'
 
 export const LocationView = ({
   onTimelineUpdate,
@@ -60,17 +62,30 @@ export const LocationView = ({
             onItemClick={onItemClick}
             onItemEdit={onItemEdit}
             onItemDelete={onItemDelete}
-            onItemsChange={async (id, visitData) => {
+            onItemsChange={async (id, type, updateField) => {
               try {
-                console.log('update visit '+id+', '+ JSON.stringify(visitData));
-                await visitApi.updateVisit(id, visitData);
+                if(type=="visit"){
+                  console.log('update visit '+id+', '+ JSON.stringify(visitData));
+                  await visitApi.updateVisit(id, visitData);
+                }
+                else if(type=="bridge"){
+                  console.log('update bridge '+id+', '+ JSON.stringify(visitData));
+                  await bridgeApi.updateBridge(id, updateField);
+                }
+                else{
+                  console.log("cannot find the type of item");
+                }
+
+                /// 리프레시
                 onItemUpdate();
               } catch (error) {
                 console.error('Failed to update visit:', error);
               }
             }}
-            onUpdateVisit={console.log()}
-            onUpdateBridge={console.log()}
+            onUpdateVisit={()=>{
+              ///#todo initialize 시에는 불리지 말아야 함
+              console.log()}}
+            onUpdateBridge={()=>{console.log()}}
           />
           <LocationList
             items={getFilteredItems()}

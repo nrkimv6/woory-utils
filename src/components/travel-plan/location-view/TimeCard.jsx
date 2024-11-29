@@ -5,7 +5,7 @@ import CollapsibleEventActions from '@/components/travel-plan/location-view/Coll
 import LocationMarker from '@/components/travel-plan/LocationMarker';
 import { PASTEL_COLORS } from '@/util/colors';
 
-const TimeCard = ({ isDragging, item, index, isSelected, onClick, onEdit, onDelete }) => {
+const TimeCard = ({ isDragging, item, index, isSelected, onClick, onEdit, onDelete, style }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const {attributes, listeners, setNodeRef, transform} = useDraggable({
@@ -17,22 +17,20 @@ const TimeCard = ({ isDragging, item, index, isSelected, onClick, onEdit, onDele
     disabled: !isSelected // 선택된 항목만 드래그 가능
   });
 
-  const cardStyle = {
-    position: 'absolute',
-    left: '80px',
-    right: '20px',
-    top: '10px',
-    borderLeft: '4px solid #228be6',
-    backgroundColor: isSelected ? '#f0f7ff' : 'white',
-    border: isSelected ? '2px solid #228be6' : '1px solid #dee2e6',
-    cursor: 'pointer',
-    zIndex: isSelected ? 100 : index,
-    overflow: 'visible',
-    opacity: isDragging ? 0.6 : 1,
-    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0) scale(${isDragging ? 1.02 : 1})` : 
-                         isDragging ? 'scale(1.02)' : 'scale(1)',
-    transition: !isDragging ? 'transform 0.2s, opacity 0.2s' : undefined
-  };
+const cardStyle = {
+  ...style,
+  borderLeft: '4px solid #228be6',
+  backgroundColor: isSelected ? '#f0f7ff' : 'white',
+  border: isSelected ? '2px solid #228be6' : '1px solid #dee2e6',
+  cursor: 'pointer',
+  // zIndex: style.zIndex,
+  opacity: isDragging ? 0.6 : 1,
+  transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+  transition: !isDragging ? 'transform 0.2s, opacity 0.2s' : undefined,
+  // position: 'absolute',
+  overflow: 'visible'
+};
+
 
   return (
     <div ref={setNodeRef} {...listeners} {...attributes}>

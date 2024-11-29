@@ -48,7 +48,7 @@ export const eventApi = {
 }
 
 // 방문 계획 관련 함수들
-export const visitApi = {
+export const visitApi_old = {
   // 방문 계획 목록 조회
   async getVisits_old(eventId = null) {
     let query = supabase.from('tp_visits').select('*')

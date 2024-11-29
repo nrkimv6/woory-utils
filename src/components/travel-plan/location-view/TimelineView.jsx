@@ -65,7 +65,8 @@ const TimeSlot = React.memo(function TimeSlot({
       style={{
         height: isCollapsed ? '30px' : ZOOM_LEVELS[zoomLevel].height,
         borderBottom: '1px dashed #ddd',
-        cursor: 'pointer'
+        cursor: 'pointer',
+        zIndex: 1 
       }}
     >
       <Group position="apart" spacing="xs" className="absolute left-0 top-0 w-[70px]">
@@ -123,10 +124,10 @@ export const TimelineView = ({
   onItemClick,
   onItemEdit,
   onItemDelete,
-  onUpdateVisit,
-  onUpdateBridge,
+  onItemsChange
 }) => {
   const [localItems, setLocalItems] = useState([]);
+  const [visibleItems, setVisibleItems] = useState([]);
   const [collapsedRanges, setCollapsedRanges] = useState([]);
   const [zoomLevel, setZoomLevel] = useState(1);
 
@@ -139,30 +140,102 @@ export const TimelineView = ({
       }
       return a.visitTime ? 1 : -1;
     });
+
+    console.log("*** renderItems localItems ***");
+    console.log(JSON.stringify(localItems));
+    console.log("****************");
     setLocalItems(sortedItems);
+    setVisibleItems(localItems);
   }, [items]);
+
+
+  // useEffect(() => {
+  //   setVisibleItems(localItems);
+  // }, [localItems]);
 
 
   const handleDragEnd = async (event) => {
     const { active, over } = event;
     if (!over) return;
+    if (!selectedItem) {
+      console.log("not selected!");
+      return;
+    }
 
     const itemId = active.id;
     const itemType = active.data.current?.type;
     const newTime = parseInt(over.id.split('-')[1]);
 
     try {
-      if (itemType === 'visit') {
-        await onUpdateVisit(itemId, { visitTime: new Date(newTime).toISOString() });
-      } else if (itemType === 'bridge') {
-        await onUpdateBridge(itemId, { visitTime: new Date(newTime).toISOString() });
-      }
+      await onItemsChange(itemId, itemType, { visitTime: new Date(newTime).toISOString() });
     } catch (error) {
       console.error('Failed to update timeline item:', error);
     }
   };
 
+
   const onToggleCollapse = useCallback((hour) => {
+    setCollapsedRanges(prev => {
+      let updatedRanges = [...prev];
+      const existingRangeIndex = updatedRanges.findIndex(([start, end]) =>
+        hour >= start && hour <= end
+      );
+
+      // 기존 접힌 범위가 있으면 제거
+      if (existingRangeIndex !== -1) {
+        updatedRanges = updatedRanges.filter((_, index) => index !== existingRangeIndex);
+      } else {
+        // 해당 시간에 아이템이 없으면 새로운 범위 추가
+        if (!localItems.some(v => new Date(v.visitTime).getHours() === hour)) {
+          const itemByHour = new Array(24).fill(false);
+          localItems.forEach(item => {
+            const visitHour = new Date(item.visitTime).getHours();
+            itemByHour[visitHour] = true;
+          });
+
+          let start = hour;
+          let end = hour;
+
+          while (start > 1 && !itemByHour[start - 1]) {
+            start--;
+          }
+
+          while (end < 22 && !itemByHour[end + 1]) {
+            end++;
+          }
+
+          if (end - start >= 1) {
+            const newRange = [start, end];
+            updatedRanges = [
+              ...updatedRanges.filter(([rStart, rEnd]) =>
+                rEnd < start - 1 || rStart > end + 1
+              ),
+              newRange
+            ];
+          }
+        }
+      }
+
+      // 접힌 범위에 있는 아이템 필터링
+      const updatedVisibleItems = localItems.filter(item => {
+        const itemHour = new Date(item.visitTime).getHours();
+        return !updatedRanges.some(([start, end]) =>
+          itemHour >= start && itemHour <= end
+        );
+      });
+
+      setVisibleItems(updatedVisibleItems);
+
+
+      console.log("*** updated VisibleItems items ***");
+      console.log(JSON.stringify(updatedVisibleItems));
+      console.log("****************");
+      return updatedRanges;
+    });
+  }, [localItems]);
+
+
+  const onToggleCollapse_old = useCallback((hour) => {
     setCollapsedRanges(prev => {
       const existingRangeIndex = prev.findIndex(([start, end]) =>
         hour >= start && hour <= end
@@ -200,9 +273,31 @@ export const TimelineView = ({
         );
         return [...nonOverlapping, newRange];
       }
+      // 접힌 범위에 있는 아이템들 필터링
+      // const visibleItems = items.filter(item => {
+      //   const itemHour = new Date(item.visitTime).getHours();
+      //   return !newRanges.some(([start, end]) => 
+      //     itemHour >= start && itemHour <= end
+      //   );
+      // });
 
+      // setVisibleItems(visibleItems);
       return prev;
     });
+
+    const visibleItems = localItems.filter(item => {
+      const itemHour = new Date(item.visitTime).getHours();
+      return !newRanges.some(([start, end]) =>
+        itemHour >= start && itemHour <= end
+      );
+
+    });
+
+    console.log("*** visible items ***");
+    console.log(JSON.stringify(visibleItems));
+    console.log("****************");
+
+    setVisibleItems(visibleItems);
   }, [localItems, zoomLevel]);
 
   const getCollapsedRange = useCallback((hour) => {
@@ -319,98 +414,251 @@ export const TimelineView = ({
       return null;
     });
   };
-const calculateTopPosition = useCallback((startTime) => {
-  // date prop을 사용하여 해당 날짜의 자정 설정
-  const midnight = new Date(date);
-  midnight.setHours(0, 0, 0, 0);
-  
-  console.log('Time calculation:', {
-    input: startTime,
-    midnight,
-    date: date
-  });
-  
-  const minutesSinceMidnight = differenceInMinutes(startTime, midnight);
-  const slotHeight = ZOOM_LEVELS[zoomLevel].height;
-  const slotInterval = ZOOM_LEVELS[zoomLevel].interval;
-  
-  return (minutesSinceMidnight / slotInterval) * slotHeight;
-}, [date, zoomLevel]);
 
-const calculateHeight = useCallback((duration) => {
-  const slotHeight = ZOOM_LEVELS[zoomLevel].height;
-  const slotInterval = ZOOM_LEVELS[zoomLevel].interval;
-  
-  const height = (duration / slotInterval) * slotHeight;
-  
-  console.log('calculateHeight:', {
-    duration,
-    slotHeight,
-    slotInterval,
-    calculatedHeight: height
-  });
+  const calculateTopPosition_old = useCallback((startTime) => {
+    // 입력된 UTC 시간을 로컬 시간으로 변환
+    const localStartTime = new Date(startTime);
 
-  return height;
-}, [zoomLevel]);
+    // 해당 날짜의 자정 (로컬 시간)
+    const midnight = new Date(date);
+    midnight.setHours(0, 0, 0, 0);
 
+    console.log('Time calculation debug:', {
+      originalStartTime: startTime,
+      localStartTime: localStartTime.toISOString(),
+      localStartTimeString: localStartTime.toString(),
+      midnight: midnight.toISOString(),
+      midnightString: midnight.toString(),
+      minutesSinceMidnight: differenceInMinutes(localStartTime, midnight)
+    });
+
+    const minutesSinceMidnight = differenceInMinutes(localStartTime, midnight);
+    const slotHeight = ZOOM_LEVELS[zoomLevel].height;
+    const slotInterval = ZOOM_LEVELS[zoomLevel].interval;
+
+    const position = (minutesSinceMidnight / slotInterval) * slotHeight;
+    console.log('calculateTopPosition:', position);
+    return position;
+  }, [date, zoomLevel]);
+
+  const calculateTopPosition = useCallback((startTime) => {
+    const localStartTime = new Date(startTime);
+    const localMidnight = new Date(localStartTime);
+    localMidnight.setHours(0, 0, 0, 0);
+
+    const minutesSinceMidnight = differenceInMinutes(localStartTime, localMidnight);
+    const slotHeight = ZOOM_LEVELS[zoomLevel].height;
+    const slotInterval = ZOOM_LEVELS[zoomLevel].interval;
+    
+    const position = (minutesSinceMidnight / slotInterval) * slotHeight;
+    console.log('calculateTopPosition:', position);
+    return position;
+    
+  }, [zoomLevel]);
+
+
+  const calculateHeight = useCallback((duration) => {
+    const slotHeight = ZOOM_LEVELS[zoomLevel].height;
+    const slotInterval = ZOOM_LEVELS[zoomLevel].interval;
+
+    const height = (duration / slotInterval) * slotHeight;
+
+    console.log('calculateHeight:', {
+      duration,
+      slotHeight,
+      slotInterval,
+      calculatedHeight: height
+    });
+
+    return height;
+  }, [zoomLevel]);
+
+  const getSlotWidth = useCallback(() => {
+    const timeSlot = document.querySelector('.time-slot');
+    return timeSlot?.offsetWidth || 0;
+  }, []);
+
+  // const slotWidth = getSlotWidth();
+
+
+  //   const renderItems = useCallback(() => {
+  //   const itemsByTime = {};
+  //   items.forEach(item => {
+  //     const timeKey = new Date(item.visitTime).getTime();
+  //     if (!itemsByTime[timeKey]) {
+  //       itemsByTime[timeKey] = [];
+  //     }
+  //     itemsByTime[timeKey].push(item);
+  //   });
+
+  //   return items.map((item) => {
+  //     const startTime = new Date(item.visitTime);
+  //     const timeKey = startTime.getTime();
+  //     const sameTimeItems = itemsByTime[timeKey].filter(i => i.type === item.type);
+  //     const itemIndex = sameTimeItems.findIndex(i => i.id === item.id);
+  //     const topPosition = calculateTopPosition(startTime);
+  //     const duration = item.duration || (item.type === 'bridge' ? 5 : 30);
+  //     const itemHeight = calculateHeight(duration);
+
+  //     if (item.type === 'bridge') {
+  //       // 브릿지는 균등 분배
+  //       const containerWidth = window.innerWidth - 100; // 좌우 여백 제외
+  //       const itemWidth = containerWidth / sameTimeItems.length;
+  //       const left = 80 + (itemWidth * itemIndex);
+
+  //       return (
+  //         <TimeBridge
+  //           key={`bridge-${item.id}`}
+  //           {...item}
+  //           name={item.notes}
+  //           style={{
+  //             position: 'absolute',
+  //             top: topPosition,
+  //             height: itemHeight,
+  //             left: `${left}px`,
+  //             width: `${itemWidth * 0.9}px`, // 약간의 여백
+  //             zIndex: 1
+  //           }}
+  //           isSelected={selectedItem?.id === item.id}
+  //           onClick={onItemClick}
+  //           onEdit={onItemEdit}
+  //           onDelete={onItemDelete}
+  //         />
+  //       );
+  //     }
+
+  //     const isSelected=selectedItem?.id === item.id;
+
+  //     return (
+  //       <TimeCard
+  //         key={`visit-${item.id}`}
+  //         item={item}
+  //         index={itemIndex}
+  //         style={{
+  //           position: 'absolute',
+  //           top: topPosition,
+  //           left: `${80 + (itemIndex * 15)}px`,
+  //           right: `${20 + ((sameTimeItems.length - itemIndex - 1) * 15)}px`,
+  //           zIndex: isSelected ? 100 : 2
+  //         }}
+  //         isDragging={false}
+  //         isSelected={isSelected}
+  //         onClick={onItemClick}
+  //         onEdit={onItemEdit}
+  //         onDelete={onItemDelete}
+  //       />
+  //     );
+  //   });
+  // }, [items, selectedItem, calculateTopPosition, calculateHeight, onItemClick, onItemEdit, onItemDelete]);
+
+  //   return (
+  //     <DndContext onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis]}>
+  //       <ScrollArea style={{ height: 'calc(100vh - 200px)' }}>
+  //         <div className="relative">
+  //           {/* 타임슬롯 그리드 */}
+  //         <Stack spacing={0} className="relative">
+  //           {renderTimeSlots()}
+  //           {renderItems()}  {/* Stack 내부로 이동 */}
+  //         </Stack>
+  //         </div>
+  //       </ScrollArea>
+  //     </DndContext>
+  //   );
+  // };
+
+  const renderItems = useCallback(() => {
+
+    console.log("*** renderItems localItems ***");
+    console.log(JSON.stringify(localItems));
+    console.log("****************");
+
+    const itemsByTime = {};
+    localItems.forEach(item => {
+      const timeKey = new Date(item.visitTime).getTime();
+      if (!itemsByTime[timeKey]) itemsByTime[timeKey] = [];
+      itemsByTime[timeKey].push(item);
+    });
+
+    return visibleItems.map((item) => {
+      const startTime = new Date(item.visitTime);
+      const timeKey = startTime.getTime();
+      // const timeKey = new Date(item.visitTime).getTime();
+      const sameTimeItems = visibleItems.filter(i =>
+        new Date(i.visitTime).getTime() === timeKey &&
+        i.type === item.type
+      );
+      // const sameTimeItems = itemsByTime[timeKey].filter(i => i.type === item.type);
+      const itemIndex = sameTimeItems.findIndex(i => i.id === item.id);
+      const topPosition = calculateTopPosition(startTime);
+      const duration = item.duration || (item.type === 'bridge' ? 5 : 30);
+      const itemHeight = calculateHeight(duration);
+      const slotWidth = getSlotWidth(); // TimeSlot의 실제 폭
+      const isSelected = selectedItem?.id === item.id;
+
+      if (item.type === 'bridge') {
+        const itemWidth = slotWidth / Math.max(sameTimeItems.length, 1);
+        const left = 80 + (itemWidth * itemIndex);
+
+        console.log("*** renderItems bridge item *** top:" + topPosition);
+        console.log(JSON.stringify(item));
+        console.log("****************");
+        return (
+          <TimeBridge
+            key={`bridge-${item.id}`}
+            {...item}
+            style={{
+              position: 'absolute',
+              top: topPosition,
+              height: itemHeight,
+              left: `${left}px`,
+              width: `${itemWidth * 0.9}px`,
+              zIndex: 10
+            }}
+            name={item.notes}
+            isSelected={selectedItem?.id === item.id}
+            onClick={onItemClick}
+            onEdit={onItemEdit}
+            onDelete={onItemDelete}
+          />
+        );
+      }
+
+      console.log("*** renderItems timecard item *** top" + topPosition);
+      console.log(JSON.stringify(item));
+      console.log("****************");
+
+      return (
+        <TimeCard
+          key={`visit-${item.id}`}
+          {...item}
+          item={item}
+          index={itemIndex}
+          style={{
+            position: 'absolute',
+            top: topPosition,
+            left: `${80 + (itemIndex * 15)}px`,
+            right: `${20 + ((sameTimeItems.length - itemIndex - 1) * 15)}px`,
+            zIndex: isSelected ? 100 : 2
+          }}
+          isDragging={false}
+          isSelected={isSelected}
+          onClick={onItemClick}
+          onEdit={onItemEdit}
+          onDelete={onItemDelete}
+        />
+      );
+    });
+  }, [visibleItems]);
 
   return (
     <DndContext onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis]}>
       <ScrollArea style={{ height: 'calc(100vh - 200px)' }}>
-        <div className="relative">
-          {/* 타임슬롯 그리드 */}
-          <Stack spacing={0}>
-            {renderTimeSlots()}
-          </Stack>
-
-          {/* TimeCard와 TimeBridge 렌더링 */}
-          {items.map(item => {
-            const startTime = new Date(item.visitTime);
-            const duration = item.duration || 0;
-            const topPosition = calculateTopPosition(startTime);
-            const itemHeight = calculateHeight(duration);
-
-            if (item.type === 'bridge') {
-              console.log(`Bridge ${item.id} rendering details:`, {
-                name: item.note,
-                visitTime: item.visitTime,
-                startTime: startTime.toISOString(),
-                duration,
-                calculatedTop: topPosition,
-                calculatedHeight: itemHeight,
-                zoomLevel,
-                slotHeight: ZOOM_LEVELS[zoomLevel].height,
-                slotInterval: ZOOM_LEVELS[zoomLevel].interval
-              });
-              console.log(JSON.stringify(item));
-
-              return (
-                <TimeBridge
-                  key={`bridge-${item.id}`}
-                  {...item}
-                  name={item.notes}
-                  style={{
-                    position: 'absolute',
-                    top: topPosition,
-                    height: itemHeight
-                  }}
-                />
-              );
-            }
-
-            return (
-              <TimeCard
-                key={`visit-${item.id}`}
-                {...item}
-                style={{
-                  position: 'absolute',
-                  top: topPosition
-                }}
-              />
-            );
-          })}
-        </div>
+         <div className="relative">
+        {/* TimeSlot과 아이템들이 모두 같은 상위 relative 컨테이너 안에서 겹쳐지도록 함 */}
+        {renderTimeSlots()}
+        {renderItems()}  {/* TimeSlots와 같은 레벨에서 absolute 포지셔닝 */}
+      </div>
       </ScrollArea>
     </DndContext>
-  );
+  )
 };

@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import { format } from 'date-fns';
 import { BridgeItem } from '@/components/travel-plan/types';
+import { saveToUTC, utcToLocal } from '@/util/dbfunc';
 
 const BRIDGE_TABLE = 'tp_bridges';
 
@@ -9,12 +10,14 @@ const transformBridgeFromDB = (dbBridge: any): BridgeItem => ({
   id: dbBridge.id,
   type: 'bridge',
   eventId: dbBridge.event_id,
+  // visitTime: utcToLocal(dbBridge.visit_time).toISOString(),
   visitTime: dbBridge.visit_time,
   visitOrder: dbBridge.visit_order,
   bridgeType: dbBridge.bridge_type,
   duration: dbBridge.duration,
   location: dbBridge.location,
   isReserved: dbBridge.is_reserved,
+  // reservationTime: dbBridge.reservation_time ? utcToLocal(dbBridge.reservation_time).toISOString() : undefined,
   reservationTime: dbBridge.reservation_time,
   reservationUrl: dbBridge.reservation_url,
   referenceUrl: dbBridge.reference_url,
@@ -24,12 +27,14 @@ const transformBridgeFromDB = (dbBridge: any): BridgeItem => ({
 
 const transformBridgeToDB = (bridge: Partial<BridgeItem>) => ({
   event_id: bridge.eventId,
+  // visit_time: bridge.visitTime ? saveToUTC(bridge.visitTime) : undefined,
   visit_time: bridge.visitTime,
   visit_order: bridge.visitOrder,
   bridge_type: bridge.bridgeType,
   duration: bridge.duration,
   location: bridge.location,
   is_reserved: bridge.isReserved,
+  // reservation_time: bridge.reservationTime ? saveToUTC(bridge.reservationTime) : undefined,
   reservation_time: bridge.reservationTime,
   reservation_url: bridge.reservationUrl,
   reference_url: bridge.referenceUrl,

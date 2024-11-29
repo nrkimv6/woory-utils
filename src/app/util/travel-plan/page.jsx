@@ -1,8 +1,9 @@
 "use client"
 import React, { useEffect, useState } from 'react';
 import { Group, Tabs } from '@mantine/core';
-import { eventApi, visitApi } from '@/lib/travel-plan/api';
+import { eventApi } from '@/lib/travel-plan/api';
 import {bridgeApi} from '@/lib/travel-plan/bridgeApi'
+import {visitApi} from '@/lib/travel-plan/visitApi'
 
 import EventForm from '@/components/travel-plan/EventForm';
 import VisitForm from '@/components/travel-plan/VisitForm';
@@ -11,10 +12,17 @@ import { LocationView } from '@/components/travel-plan/LocationView';
 import { MapView } from '@/components/travel-plan/MapView';
 import { useLocationFilter } from '@/hooks/travel-plan/useLocationFilter';
 import { showSuccess, showError } from '@/util/notification';
-
+import { useRouter, useSearchParams } from 'next/navigation';
 // KakaoMapList.jsx
 const TravelPlan = () => {
-  const [activeTab, setActiveTab] = useState("events");
+/// router 정보
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get('tab') || 'events';
+  const initialDate = searchParams.get('date') || null;
+
+
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [events, setEvents] = useState([]);
   const [visitsAndTrans, setVisitsAndTrans] = useState([]);
@@ -27,6 +35,40 @@ const TravelPlan = () => {
     events,
     visitsAndTrans
   );
+  
+  const formatDateForURL = (date) => {
+    if (!date) return null;
+    const d = new Date(date);
+    return d.toISOString().split('T')[0];
+  };
+
+  // Parse date from URL format
+  const parseDateFromURL = (dateString) => {
+    if (!dateString) return null;
+    return new Date(dateString);
+  };
+
+  // Update URL when tab or date changes
+  const updateURL = (newTab, newDate) => {
+    const params = new URLSearchParams();
+    if (newTab) params.set('tab', newTab);
+    if (newDate) {
+      const formattedDate = formatDateForURL(newDate);
+      if (formattedDate) params.set('date', formattedDate);
+    }
+    
+    // Create new URL with updated parameters
+    const newURL = `${window.location.pathname}?${params.toString()}`;
+    router.push(newURL);
+  };
+
+  // Set initial date from URL parameter
+  useEffect(() => {
+    if (initialDate) {
+      const parsedDate = parseDateFromURL(initialDate);
+      setFilters(prev => ({ ...prev, date: parsedDate }));
+    }
+  }, []);
 
   const getLocationInfo = (item, type) => {
     if (type === 'events') {
@@ -78,6 +120,7 @@ const TravelPlan = () => {
   const handleTabChange = (value) => {
     setActiveTab(value);
     setSelectedLocation(null);
+    updateURL(value, filters.date);
 
     if (value === "events") {
       fetchEvents();
@@ -85,6 +128,7 @@ const TravelPlan = () => {
       fetchVisits();
     }
   };
+
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
@@ -188,7 +232,7 @@ const TravelPlan = () => {
         await visitApi.updateVisit(editingVisit.id, prepareVisitData(visitData));
         showSuccess("방문 계획이 수정되었습니다.");
       } else {
-        await visitApi.addVisit(prepareVisitData(visitData));
+        await visitApi.createVisit(prepareVisitData(visitData));
         showSuccess("방문 계획이 추가되었습니다.");
       }
       fetchVisits();

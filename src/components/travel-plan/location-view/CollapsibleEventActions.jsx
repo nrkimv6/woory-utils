@@ -53,7 +53,17 @@ export function EventActions({ item, onEdit, onDelete, type = 'event'  }) {
 };
 
 
-const CollapsibleEventActions = ({ isExpanded, onToggle, item, onEdit, onDelete, type }) => (
+const CollapsibleEventActions = ({ isExpanded, onToggle, item, onEdit, onDelete, type }) => {
+const actionStyle = {
+  position: 'absolute',
+  right: 0,
+  top: '100%',
+  zIndex: 1000,
+  backgroundColor: 'white',
+  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+  borderRadius: '4px'
+};
+  return  (
   <>
     <ActionIcon 
       size="sm" 
@@ -61,11 +71,11 @@ const CollapsibleEventActions = ({ isExpanded, onToggle, item, onEdit, onDelete,
         e.stopPropagation();
         onToggle();
       }}
-      style={{ position: 'absolute', right: 10, top: 10 }}
+      style={actionStyle}
     >
       {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
     </ActionIcon>
     {isExpanded && <EventActions item={item} onEdit={onEdit} onDelete={onDelete} type={type} />}
   </>
-);
+)};
 export default CollapsibleEventActions;

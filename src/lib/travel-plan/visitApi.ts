@@ -2,6 +2,7 @@
 import { supabase } from '@/lib/supabase';
 import { format } from 'date-fns';
 import { VisitItem } from '@/components/travel-plan/types';
+import { saveToUTC, utcToLocal } from '@/util/dbfunc';
 
 const VISIT_TABLE = 'tp_visits';
 const EVENTS_FIELDS = `
@@ -42,6 +43,8 @@ export const transformVisitFromDB = (dbVisit: any): VisitItem => ({
   id: dbVisit.id,
   type: 'visit',
   eventId: dbVisit.event_id,
+  // visitTime: utcToLocal(dbVisit.visit_time).toISOString(),
+  // reservationTime: dbVisit.reservation_time ? utcToLocal(dbVisit.reservation_time).toISOString() : undefined,
   visitTime: dbVisit.visit_time,
   visitOrder: dbVisit.visit_order,
   isReserved: dbVisit.is_reserved,
@@ -72,11 +75,13 @@ export const transformVisitFromDB = (dbVisit: any): VisitItem => ({
 
 export const transformVisitToDB = (visit: Partial<VisitItem>) => ({
   event_id: visit.eventId,
-  visit_time: visit.visitTime,
+  // visit_time: visit.visitTime,
+  visit_time: visit.visitTime ? saveToUTC(visit.visitTime) : undefined,
+  // reservation_time: visit.reservationTime ,
+  reservation_time: visit.reservationTime ? saveToUTC(visit.reservationTime) : undefined,
   visit_order: visit.visitOrder,
   is_reserved: visit.isReserved,
   is_important: visit.isImportant,
-  reservation_time: visit.reservationTime,
   reservation_url: visit.reservationUrl,
   reference_url: visit.referenceUrl,
   notes: visit.notes
@@ -84,7 +89,7 @@ export const transformVisitToDB = (visit: Partial<VisitItem>) => ({
 
 
 export const visitApi = {
- async getVisits(eventId = null): Promise<VisitItem[]> {
+  async getVisits(eventId = null): Promise<VisitItem[]> {
     let query = supabase
       .from('tp_visits')
       .select(`
@@ -121,7 +126,7 @@ export const visitApi = {
   // 날짜별 조회도 동일한 필드 포함
   async getVisitsByDate(date: Date): Promise<VisitItem[]> {
     const formattedDate = format(date, 'yyyy-MM-dd');
-    
+
     const { data, error } = await supabase
       .from('tp_visits')
       .select(`
